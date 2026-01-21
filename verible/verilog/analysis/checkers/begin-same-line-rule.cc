@@ -40,7 +40,7 @@ using verible::TokenStreamLintRule;
 VERILOG_REGISTER_LINT_RULE(BeginSameLineRule);
 
 static const char kMessage[] =
-    "begin should be on the same line with the preceding statement.";
+    " begin should be on the same line with the preceding statement.";
 
 const LintRuleDescriptor &BeginSameLineRule::GetDescriptor() {
   static const LintRuleDescriptor d{
