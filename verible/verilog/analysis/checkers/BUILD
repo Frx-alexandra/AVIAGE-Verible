@@ -68,6 +68,7 @@ cc_library(
         ":posix-eof-rule",
         ":proper-parameter-declaration-rule",
         ":signal-name-style-rule",
+        ":signal-name-prefix-rule",
         ":struct-union-name-style-rule",
         ":suggest-parentheses-rule",
         ":suspicious-semicolon-rule",
@@ -1988,6 +1989,44 @@ cc_test(
     srcs = ["signal-name-style-rule_test.cc"],
     deps = [
         ":signal-name-style-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:syntax-tree-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "signal-name-prefix-rule",
+    srcs = ["signal-name-prefix-rule.cc"],
+    hdrs = ["signal-name-prefix-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:syntax-tree-lint-rule",
+        "//verible/common/analysis/matcher",
+        "//verible/common/analysis/matcher:bound-symbol-manager",
+        "//verible/common/text:symbol",
+        "//verible/common/text:syntax-tree-context",
+        "//verible/common/text:token-info",
+        "//verible/common/util:logging",
+        "//verible/verilog/CST:declaration",
+        "//verible/verilog/CST:net",
+        "//verible/verilog/CST:port",
+        "//verible/verilog/CST:verilog-matchers",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "@abseil-cpp//absl/strings",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "signal-name-prefix-rule_test",
+    srcs = ["signal-name-prefix-rule_test.cc"],
+    deps = [
+        ":signal-name-prefix-rule",
         "//verible/common/analysis:linter-test-utils",
         "//verible/common/analysis:syntax-tree-linter-test-utils",
         "//verible/verilog/analysis:verilog-analyzer",
