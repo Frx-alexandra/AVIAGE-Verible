@@ -49,6 +49,8 @@ TEST(SignalNamePrefixRuleTest, AcceptTests) {
        "logic io_long_name; endmodule;"},
       {"module t; wire w_long_signal_name; reg r_long_register_name; "
        "endmodule;"},
+      {"module t; tri t_signal; wor w_or; triand ta_signal; trior to_signal; "
+       "endmodule;"},
       {"module t; input logic i_name,\n"
        "output logic o_name,\n"
        "inout logic io_name,\n"

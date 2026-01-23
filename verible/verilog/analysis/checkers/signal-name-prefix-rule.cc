@@ -24,14 +24,17 @@
 #include "verible/common/analysis/lint-rule-status.h"
 #include "verible/common/analysis/matcher/bound-symbol-manager.h"
 #include "verible/common/analysis/matcher/matcher.h"
+#include "verible/common/text/concrete-syntax-tree.h"
 #include "verible/common/text/symbol.h"
 #include "verible/common/text/syntax-tree-context.h"
 #include "verible/common/text/token-info.h"
+#include "verible/common/text/tree-utils.h"
 #include "verible/common/util/logging.h"
 #include "verible/verilog/CST/declaration.h"
 #include "verible/verilog/CST/identifier.h"
 #include "verible/verilog/CST/net.h"
 #include "verible/verilog/CST/port.h"
+#include "verible/verilog/CST/type.h"
 #include "verible/verilog/CST/verilog-matchers.h"
 #include "verible/verilog/analysis/descriptions.h"
 #include "verible/verilog/analysis/lint-rule-registry.h"
@@ -151,8 +154,21 @@ void SignalNamePrefixRule::HandleSymbol(const Symbol &symbol,
 
   // Handle net declarations (wire, tri, wor, etc.)
   if (NetDeclarationMatcher().Matches(symbol, &manager)) {
-    // TODO: This is a simplified approach that assumes all nets are wires
-    // In a real implementation, you'd need to check the actual net type
+    // Check the actual net type
+    std::string net_type;
+    const auto *data_type =
+        verible::GetSubtreeAsSymbol(symbol, NodeEnum::kNetDeclaration, 0);
+    if (data_type &&
+        data_type->Tag().tag == static_cast<int>(NodeEnum::kDataType)) {
+      const auto *type_symbol =
+          verible::GetSubtreeAsSymbol(*data_type, NodeEnum::kDataType, 1);
+      if (type_symbol && type_symbol->Kind() == verible::SymbolKind::kLeaf) {
+        const auto &leaf = verible::SymbolCastToLeaf(*type_symbol);
+        net_type = leaf.get().text();
+      }
+    }
+    // Only check for wire declarations
+    if (net_type != "wire") return;
     const auto identifiers = GetIdentifiersFromNetDeclaration(symbol);
     for (const auto *token_info : identifiers) {
       if (token_info) {
@@ -225,16 +241,42 @@ void SignalNamePrefixRule::HandleSymbol(const Symbol &symbol,
   }
 
   // Handle register variables (reg)
-  const auto register_variables = FindAllRegisterVariables(symbol);
-  for (const auto &match : register_variables) {
-    if (match.match) {
-      const auto *identifier_leaf = GetNameLeafOfRegisterVariable(*match.match);
-      if (identifier_leaf) {
-        const auto token = identifier_leaf->get();
-        const auto name = token.text();
+  if (symbol.Kind() == verible::SymbolKind::kNode &&
+      verible::SymbolCastToNode(symbol).Tag().tag ==
+          static_cast<int>(NodeEnum::kDataDeclaration)) {
+    std::string var_type;
+    const verible::SyntaxTreeNode *instantiation_type =
+        GetInstantiationTypeOfDataDeclaration(symbol);
+    if (instantiation_type) {
+      const verible::SyntaxTreeNode *data_type = verible::GetSubtreeAsNode(
+          *instantiation_type, NodeEnum::kInstantiationType, 0,
+          NodeEnum::kDataType);
+      if (data_type) {
+        const verible::Symbol *base_type = GetBaseTypeFromDataType(*data_type);
+        if (base_type && base_type->Tag().tag ==
+                             static_cast<int>(NodeEnum::kDataTypePrimitive)) {
+          const verible::Symbol *type_leaf = verible::GetSubtreeAsSymbol(
+              *base_type, NodeEnum::kDataTypePrimitive, 0);
+          if (type_leaf && type_leaf->Kind() == verible::SymbolKind::kLeaf) {
+            var_type = verible::SymbolCastToLeaf(*type_leaf).get().text();
+          }
+        }
+      }
+    }
+    if (var_type == "reg") {
+      const auto register_variables = FindAllRegisterVariables(symbol);
+      for (const auto &match : register_variables) {
+        if (match.match) {
+          const auto *identifier_leaf =
+              GetNameLeafOfRegisterVariable(*match.match);
+          if (identifier_leaf) {
+            const auto token = identifier_leaf->get();
+            const auto name = token.text();
 
-        if (!(name.size() > 2 && name.substr(0, 2) == "r_")) {
-          Violation("reg", token, context);
+            if (!(name.size() > 2 && name.substr(0, 2) == "r_")) {
+              Violation("reg", token, context);
+            }
+          }
         }
       }
     }
