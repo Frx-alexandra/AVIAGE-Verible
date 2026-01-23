@@ -1,3 +1,3 @@
 // verilog_syntax: parse-as-module-body
-wire foo;
+wire w_foo;
 bar baz(x, y, z);

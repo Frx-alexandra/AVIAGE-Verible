@@ -1,6 +1,6 @@
 module module_begin_block;
-  wire foobar;
+  wire w_foobar;
   begin   // LRM-invalid syntax
-    wire barfoo;
+    wire w_barfoo;
   end
 endmodule
