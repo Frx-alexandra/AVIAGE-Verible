@@ -39,6 +39,7 @@ inline constexpr const char* kDefaultRuleSet[] = {
     "forbidden-macro",
     "create-object-name-match",
     "packed-dimensions-range-ordering",
+    "packed-dimensions-range-decrease-to-zero",
     "unpacked-dimensions-range-ordering",
     "no-trailing-spaces",
     "no-tabs",

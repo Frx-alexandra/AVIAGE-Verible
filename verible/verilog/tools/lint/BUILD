@@ -88,6 +88,7 @@ _linter_test_configs = [
     ("numeric-format-string-style", "numeric_format_string_style", False),
     ("package-filename", "package_filename_pkg", True),
     ("packed-dimensions-range-ordering", "packed_dimensions", True),
+    ("packed-dimensions-range-decrease-to-zero", "packed_dimensions_decrease_to_zero", True),
     ("parameter-name-style", "localparam_name_style", True),
     ("parameter-name-style=localparam_style:ALL_CAPS", "localparam_name_style_all_caps", False),
     ("parameter-name-style=localparam_style:CamelCase", "localparam_name_style_camel_case", True),
