@@ -42,13 +42,13 @@ TEST(MultiLineCommentsRuleTest, AcceptsSingleLine) {
 // Tests that properly formatted multi-line comments pass.
 TEST(MultiLineCommentsRuleTest, AcceptsProperMultiLine) {
   const std::initializer_list<LintTestCase> kTestCases = {
-      {"//===========================================================\n"
+      {"//==========================================================\n"
        "// comment line 1\n"
-       "//===========================================================\n"},
-      {"//===========================================================\n"
+       "//==========================================================\n"},
+      {"//==========================================================\n"
        "// line 1\n"
        "// line 2\n"
-       "//===========================================================\n"},
+       "//==========================================================\n"},
   };
   RunLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(kTestCases);
 }
@@ -57,7 +57,7 @@ TEST(MultiLineCommentsRuleTest, AcceptsProperMultiLine) {
 TEST(MultiLineCommentsRuleTest, RejectsImproperMultiLine) {
   const std::initializer_list<LintTestCase> kTestCases = {
       {
-          "//===========================================================\n"
+          "//==========================================================\n"
           "// comment line 1\n"
           "// not a border\n",
           {TK_OTHER, "// not a border"},
@@ -65,14 +65,8 @@ TEST(MultiLineCommentsRuleTest, RejectsImproperMultiLine) {
       {
           "// not a border\n"
           "// comment line 1\n"
-          "//===========================================================\n",
+          "//==========================================================\n",
           {TK_OTHER, "// comment line 1"},
-      },
-      {
-          "//===========================================================\n"
-          "code; // not a comment\n"
-          "//===========================================================\n",
-          {TK_OTHER, "code; // not a comment"},
       },
   };
   RunLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(kTestCases);

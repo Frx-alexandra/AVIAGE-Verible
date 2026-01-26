@@ -48,11 +48,11 @@ class MultiLineCommentsRule : public verible::TextStructureLintRule {
 
   // Configurable border pattern (default:
   // "===========================================================")
-  std::string border_pattern_ = std::string(59, '=');
+  std::string border_pattern_ = std::string(58, '=');
 
   // Default comment border format message
   std::string format_message_ =
-      "two forward slashes followed by 59 equal signs";
+      "two forward slashes followed by 58 equal signs";
 };
 
 }  // namespace analysis

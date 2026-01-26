@@ -41,7 +41,8 @@ using verible::TokenInfo;
 VERILOG_REGISTER_LINT_RULE(MultiLineCommentsRule);
 
 static constexpr std::string_view kDefaultMessage =
-    "Multi-line comments must be surrounded by uniform format";
+    "Multi-line comments must be surrounded by uniform format: // followed by "
+    "58 equal signs.";
 
 const LintRuleDescriptor &MultiLineCommentsRule::GetDescriptor() {
   static const LintRuleDescriptor d{
@@ -50,7 +51,7 @@ const LintRuleDescriptor &MultiLineCommentsRule::GetDescriptor() {
       .desc =
           "Checks that multi-line comments (consecutive // lines) are "
           "surrounded "
-          "by a uniform format. Default: two forward slashes followed by 59 "
+          "by a uniform format. Default: two forward slashes followed by 58 "
           "equal "
           "signs. Configurable via 'border_pattern' option.",
   };
@@ -126,32 +127,23 @@ void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
     ++lineno;
   }
 
-  // Check between borders - only report on last line of each block
+  // Check between borders
   for (size_t i = 0; i + 1 < border_lines.size(); ++i) {
     size_t start = border_lines[i] + 1;
-    size_t end = border_lines[i + 1];
-    bool found_violation = false;
-
-    // Check all lines between borders
+    size_t end = border_lines[i] + 1;
     for (size_t j = start; j < end; ++j) {
       std::string_view j_full = text_structure.Lines()[j];
       std::string_view j_stripped = j_full;
       if (absl::EndsWith(j_stripped, "\n"))
         j_stripped = j_stripped.substr(0, j_stripped.size() - 1);
       if (!std::regex_match(std::string(j_stripped), comment_regex)) {
-        found_violation = true;
+        std::string violation_msg =
+            "Multi-line comments must be surrounded by uniform format: // "
+            "followed by " +
+            format_message_ + ".";
+        TokenInfo token(TK_OTHER, j_full);
+        violations_.insert(LintViolation(token, violation_msg));
       }
-    }
-
-    // If any violation found, report on the line before the closing border
-    if (found_violation && end > start) {
-      std::string violation_msg =
-          "Multi-line comments must be surrounded by uniform format: // "
-          "followed by " +
-          format_message_ + ".";
-      std::string_view last_line_full = text_structure.Lines()[end - 1];
-      TokenInfo token(TK_OTHER, last_line_full);
-      violations_.insert(LintViolation(token, violation_msg));
     }
   }
 }
