@@ -79,6 +79,7 @@ cc_library(
         ":uvm-macro-semicolon-rule",
         ":v2001-generate-begin-rule",
         ":void-cast-rule",
+        ":multi-line-comments-rule",
     ],
     alwayslink = 1,
 )
@@ -281,6 +282,38 @@ cc_test(
         "//verible/verilog/parser:verilog-token-enum",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/strings",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "multi-line-comments-rule",
+    srcs = ["multi-line-comments-rule.cc"],
+    hdrs = ["multi-line-comments-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:text-structure-lint-rule",
+        "//verible/common/text:text-structure",
+        "//verible/common/text:token-info",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/strings",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "multi-line-comments-rule_test",
+    srcs = ["multi-line-comments-rule_test.cc"],
+    deps = [
+        ":multi-line-comments-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:text-structure-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
+        "//verible/verilog/parser:verilog-token-enum",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
