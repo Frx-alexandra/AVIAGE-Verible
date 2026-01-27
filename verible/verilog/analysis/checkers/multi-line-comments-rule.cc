@@ -14,7 +14,7 @@
 
 #include "verible/verilog/analysis/checkers/multi-line-comments-rule.h"
 
-#include <regex>
+#include <memory>
 #include <set>
 #include <string>
 #include <string_view>
@@ -22,7 +22,10 @@
 
 #include "absl/status/status.h"
 #include "absl/strings/match.h"
+#include "absl/strings/str_cat.h"
+#include "re2/re2.h"
 #include "verible/common/analysis/lint-rule-status.h"
+#include "verible/common/text/config-utils.h"
 #include "verible/common/text/text-structure.h"
 #include "verible/common/text/token-info.h"
 #include "verible/verilog/analysis/descriptions.h"
@@ -51,21 +54,22 @@ const LintRuleDescriptor &MultiLineCommentsRule::GetDescriptor() {
       .desc =
           "Checks that multi-line comments (consecutive // lines) are "
           "surrounded "
-          "by a uniform format. Default: two forward slashes followed by 58 "
-          "equal "
-          "signs. Configurable via 'border_pattern' option.",
+          "by a uniform format defined by RE2 regular expressions. Default "
+          "border regex expects // followed by 58 equal signs. Configurable "
+          "via 'border_regex' and 'comment_regex' options.",
+      .param = {{"border_regex", std::string(kDefaultBorderRegex),
+                 "A regex used to check multi-line comment border format."},
+                {"comment_regex", std::string(kDefaultCommentRegex),
+                 "A regex used to check multi-line comment content format."}},
   };
   return d;
 }
 
 void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
                                  std::string_view) {
-  // Build dynamic regex based on configured border pattern
-  std::string border_pattern_escaped = std::regex_replace(
-      border_pattern_, std::regex(R"([.^$|()\\[{}]?*+])"), R"(\$&)");
-  std::string border_regex_str = "^//" + border_pattern_escaped + "$";
-  const std::regex border_regex(border_regex_str);
-  const std::regex comment_regex(R"(^//\s*.*$)");
+  // Use configured regex patterns
+  const re2::RE2 &border_regex = *border_regex_;
+  const re2::RE2 &comment_regex = *comment_regex_;
 
   std::vector<size_t> border_lines;
 
@@ -75,7 +79,7 @@ void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
     std::string_view line_stripped = line_full;
     if (absl::EndsWith(line_stripped, "\n"))
       line_stripped = line_stripped.substr(0, line_stripped.size() - 1);
-    if (std::regex_match(std::string(line_stripped), border_regex)) {
+    if (RE2::FullMatch(line_stripped, border_regex)) {
       border_lines.push_back(lineno);
     }
 
@@ -98,21 +102,17 @@ void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
         std::string_view first_stripped = first_full;
         if (absl::EndsWith(first_stripped, "\n"))
           first_stripped = first_stripped.substr(0, first_stripped.size() - 1);
-        bool first_is_border =
-            std::regex_match(std::string(first_stripped), border_regex);
+        bool first_is_border = RE2::FullMatch(first_stripped, border_regex);
 
         std::string_view last_full = text_structure.Lines()[end_line - 1];
         std::string_view last_stripped = last_full;
         if (absl::EndsWith(last_stripped, "\n"))
           last_stripped = last_stripped.substr(0, last_stripped.size() - 1);
-        bool last_is_border =
-            std::regex_match(std::string(last_stripped), border_regex);
+        bool last_is_border = RE2::FullMatch(last_stripped, border_regex);
 
         if (!(first_is_border && last_is_border)) {
           // violation only on the last line of multi-line comment block
-          std::string violation_msg =
-              "Multi-line comments must be surrounded by uniform format: " +
-              format_message_ + ".";
+          std::string violation_msg = CreateViolationMessage();
           size_t last_violation_line = end_line - 1;
           std::string_view last_full =
               text_structure.Lines()[last_violation_line];
@@ -136,11 +136,8 @@ void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
       std::string_view j_stripped = j_full;
       if (absl::EndsWith(j_stripped, "\n"))
         j_stripped = j_stripped.substr(0, j_stripped.size() - 1);
-      if (!std::regex_match(std::string(j_stripped), comment_regex)) {
-        std::string violation_msg =
-            "Multi-line comments must be surrounded by uniform format: // "
-            "followed by " +
-            format_message_ + ".";
+      if (!RE2::FullMatch(j_stripped, comment_regex)) {
+        std::string violation_msg = CreateViolationMessage();
         TokenInfo token(TK_OTHER, j_full);
         violations_.insert(LintViolation(token, violation_msg));
       }
@@ -149,33 +146,19 @@ void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
 }
 
 absl::Status MultiLineCommentsRule::Configure(std::string_view configuration) {
-  if (configuration.empty()) {
-    return absl::OkStatus();
+  using verible::config::SetRegex;
+  absl::Status s = verible::ParseNameValues(
+      configuration, {
+                         {"border_regex", SetRegex(&border_regex_)},
+                         {"comment_regex", SetRegex(&comment_regex_)},
+                     });
+
+  if (s.ok()) {
+    format_message_ =
+        "regex pattern: " + border_regex_->pattern() + " (user-defined)";
   }
 
-  // Parse JSON-like configuration: {"border_pattern": "===...==="}
-  // Simple parsing for border_pattern key
-  std::string config_str(configuration);
-
-  // Look for border_pattern in configuration
-  std::string key = "\"border_pattern\"";
-  size_t key_pos = config_str.find(key);
-  if (key_pos != std::string::npos) {
-    size_t colon_pos = config_str.find(":", key_pos);
-    if (colon_pos != std::string::npos) {
-      size_t start_quote = config_str.find("\"", colon_pos);
-      if (start_quote != std::string::npos) {
-        size_t end_quote = config_str.find("\"", start_quote + 1);
-        if (end_quote != std::string::npos) {
-          border_pattern_ =
-              config_str.substr(start_quote + 1, end_quote - start_quote - 1);
-          format_message_ = border_pattern_ + " (user-defined)";
-        }
-      }
-    }
-  }
-
-  return absl::OkStatus();
+  return s;
 }
 
 LintRuleStatus MultiLineCommentsRule::Report() const {

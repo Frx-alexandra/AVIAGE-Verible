@@ -15,10 +15,13 @@
 #ifndef VERIBLE_VERILOG_ANALYSIS_CHECKERS_MULTI_LINE_COMMENTS_RULE_H_
 #define VERIBLE_VERILOG_ANALYSIS_CHECKERS_MULTI_LINE_COMMENTS_RULE_H_
 
+#include <memory>
 #include <set>
 #include <string_view>
 
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
+#include "re2/re2.h"
 #include "verible/common/analysis/lint-rule-status.h"
 #include "verible/common/analysis/text-structure-lint-rule.h"
 #include "verible/common/text/text-structure.h"
@@ -27,6 +30,9 @@
 namespace verilog {
 namespace analysis {
 
+static constexpr std::string_view kDefaultBorderRegex = "^//={58}$";
+static constexpr std::string_view kDefaultCommentRegex = "^//\\s*.*$";
+
 // Detects whether multi-line comments are surrounded by uniform format.
 class MultiLineCommentsRule : public verible::TextStructureLintRule {
  public:
@@ -34,7 +40,11 @@ class MultiLineCommentsRule : public verible::TextStructureLintRule {
 
   static const LintRuleDescriptor &GetDescriptor();
 
-  MultiLineCommentsRule() = default;
+  MultiLineCommentsRule()
+      : border_regex_(
+            std::make_unique<re2::RE2>(kDefaultBorderRegex, re2::RE2::Quiet)),
+        comment_regex_(std::make_unique<re2::RE2>(kDefaultCommentRegex,
+                                                  re2::RE2::Quiet)) {}
 
   absl::Status Configure(std::string_view configuration) final;
 
@@ -46,13 +56,19 @@ class MultiLineCommentsRule : public verible::TextStructureLintRule {
   // Collection of found violations.
   std::set<verible::LintViolation> violations_;
 
-  // Configurable border pattern (default:
-  // "===========================================================")
-  std::string border_pattern_ = std::string(58, '=');
+  // Configurable regex patterns for border and comment format
+  std::unique_ptr<re2::RE2> border_regex_;
+  std::unique_ptr<re2::RE2> comment_regex_;
 
   // Default comment border format message
   std::string format_message_ =
       "two forward slashes followed by 58 equal signs";
+
+  std::string CreateViolationMessage() {
+    return absl::StrCat(
+        "Multi-line comments must be surrounded by uniform format: ",
+        format_message_, ".");
+  }
 };
 
 }  // namespace analysis

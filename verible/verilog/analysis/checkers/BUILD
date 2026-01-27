@@ -294,6 +294,7 @@ cc_library(
     deps = [
         "//verible/common/analysis:lint-rule-status",
         "//verible/common/analysis:text-structure-lint-rule",
+        "//verible/common/text:config-utils",
         "//verible/common/text:text-structure",
         "//verible/common/text:token-info",
         "//verible/verilog/analysis:descriptions",
@@ -301,6 +302,7 @@ cc_library(
         "//verible/verilog/parser:verilog-token-enum",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/strings",
+        "@re2",
     ],
     alwayslink = 1,
 )
