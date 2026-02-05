@@ -65,6 +65,7 @@ cc_library(
         ":parameter-type-name-style-rule",
         ":plusarg-assignment-rule",
         ":port-name-suffix-rule",
+        ":port-type-check-rule",
         ":positive-meaning-parameter-name-rule",
         ":posix-eof-rule",
         ":proper-parameter-declaration-rule",
@@ -1948,6 +1949,45 @@ cc_test(
     srcs = ["port-name-suffix-rule_test.cc"],
     deps = [
         ":port-name-suffix-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:syntax-tree-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "port-type-check-rule",
+    srcs = ["port-type-check-rule.cc"],
+    hdrs = ["port-type-check-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:syntax-tree-lint-rule",
+        "//verible/common/analysis/matcher",
+        "//verible/common/analysis/matcher:bound-symbol-manager",
+        "//verible/common/text:symbol",
+        "//verible/common/text:syntax-tree-context",
+        "//verible/common/text:token-info",
+        "//verible/common/text:tree-utils",
+        "//verible/common/util:logging",
+        "//verible/verilog/CST:port",
+        "//verible/verilog/CST:verilog-matchers",
+        "//verible/verilog/CST:verilog-nonterminals",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@abseil-cpp//absl/strings",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "port-type-check-rule_test",
+    srcs = ["port-type-check-rule_test.cc"],
+    deps = [
+        ":port-type-check-rule",
         "//verible/common/analysis:linter-test-utils",
         "//verible/common/analysis:syntax-tree-linter-test-utils",
         "//verible/verilog/analysis:verilog-analyzer",
