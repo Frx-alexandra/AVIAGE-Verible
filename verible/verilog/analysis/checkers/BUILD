@@ -57,6 +57,7 @@ cc_library(
         ":no-tabs-rule",
         ":no-trailing-spaces-rule",
         ":numeric-format-string-style-rule",
+        ":one-port-per-line-rule",
         ":one-module-per-file-rule",
         ":package-filename-rule",
         ":packed-dimensions-rule",
@@ -173,6 +174,39 @@ cc_test(
         ":no-trailing-spaces-rule",
         "//verible/common/analysis:line-linter-test-utils",
         "//verible/common/analysis:linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "one-port-per-line-rule",
+    srcs = ["one-port-per-line-rule.cc"],
+    hdrs = ["one-port-per-line-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:syntax-tree-search",
+        "//verible/common/analysis:text-structure-lint-rule",
+        "//verible/common/text:text-structure",
+        "//verible/common/text:token-info",
+        "//verible/verilog/CST:identifier",
+        "//verible/verilog/CST:port",
+        "//verible/verilog/CST:verilog-matchers",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "one-port-per-line-rule_test",
+    srcs = ["one-port-per-line-rule_test.cc"],
+    deps = [
+        ":one-port-per-line-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:text-structure-linter-test-utils",
         "//verible/verilog/analysis:verilog-analyzer",
         "//verible/verilog/parser:verilog-token-enum",
         "@googletest//:gtest",
