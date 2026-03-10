@@ -18,7 +18,7 @@
 
 #include "gtest/gtest.h"
 #include "verible/common/analysis/linter-test-utils.h"
-#include "verible/common/analysis/text-structure-linter-test-utils.h"
+#include "verible/common/analysis/token-stream-linter-test-utils.h"
 #include "verible/verilog/analysis/verilog-analyzer.h"
 #include "verible/verilog/parser/verilog-token-enum.h"
 
@@ -35,31 +35,71 @@ TEST(OneStatementPerLineRuleTest, AcceptTests) {
   const std::initializer_list<LintTestCase> kTestCases = {
       // Empty module
       {"module t; endmodule;"},
+
+      // Single statement
+      {"module t; a = 1; endmodule;"},
+
+      // Single assignment
+      {"module t; assign a = 1; endmodule;"},
+
+      // Single if with begin/end - statement on new line after begin
+      {"if (cond)\n a = 1;"},
+
+      // Single case item on new line after label
+      {"case (x)\n 1:\n a = 1;\n endcase"},
+
+      // Single always block with statement on new line
+      {"always @(*)\n begin\n a = 1;\n end"},
+
+      // Single for loop with statement on new line
+      {"for (i=0; i<10; i++)\n begin\n a = i;\n end"},
+
+      // Single while loop with statement on new line
+      {"while (cond)\n begin\n a = 1;\n end"},
+
+      // Single initial block with statement on new line
+      {"initial\n begin\n a = 1;\n end"},
+
+      // Single begin block with statement on new line
+      {"begin\n a = 1;\n end"},
   };
   RunLintTestCases<VerilogAnalyzer, OneStatementPerLineRule>(kTestCases);
 }
 
-// Tests that OneStatementPerLineRule rejects multiple statements on same line.
+// Tests that OneStatementPerLineRule rejects statements not starting on new
+// line.
 TEST(OneStatementPerLineRuleTest, RejectTests) {
-  // The rule reports the first token of the violating statement
-  // For assignments, this is the variable identifier (SymbolIdentifier)
   constexpr int kIdToken = SymbolIdentifier;
   const std::initializer_list<LintTestCase> kTestCases = {
-      // Two procedural assignments on same line - second 'b' is violation
-      {"module t; always @(*) begin a = 1; ",
-       {kIdToken, "b"},
-       " = 2; end endmodule;"},
+      // Test 1: Statement after if condition on same line
+      {"if (cond) ", {kIdToken, "a"}, " = 1;"},
 
-      // Multiple continuous assignments on same line
-      // The variable 'b' in the second assignment is the violation
-      {"module t; assign a = 1; assign ", {kIdToken, "b"}, " = 2; endmodule;"},
+      // Test 2: Statement after begin on same line
+      {"if (cond) begin ", {kIdToken, "a"}, " = 1; end"},
 
-      // Three statements on same line - second and third are violations
-      {"module t; always @(*) begin a = 1; ",
-       {kIdToken, "b"},
-       " = 2; ",
-       {kIdToken, "c"},
-       " = 3; end endmodule;"},
+      // Test 3: Statement after case label on same line
+      {"case (x) 1: ", {kIdToken, "a"}, " = 1; endcase"},
+
+      // Test 4: Statement after begin in always block on same line
+      {"always @(*) begin ", {kIdToken, "a"}, " = 1; end"},
+
+      // Test 5: Statement after begin in for loop on same line
+      {"for (i=0; i<10; i++) begin ", {kIdToken, "a"}, " = i; end"},
+
+      // Test 6: Statement after begin in while loop on same line
+      {"while (cond) begin ", {kIdToken, "a"}, " = 1; end"},
+
+      // Test 7: Statement after begin in initial block on same line
+      {"initial begin ", {kIdToken, "a"}, " = 1; end"},
+
+      // Test 8: Statement after begin on same line
+      {"begin ", {kIdToken, "a"}, " = 1; end"},
+
+      // Test 9: Multiple statements - only first violation reported
+      {"if (cond) begin ", {kIdToken, "a"}, " = 1; b = 2; end"},
+
+      // Test 10: Second assign statement on same line
+      {"assign a = 1; assign ", {kIdToken, "b"}, " = 2;"},
   };
   RunLintTestCases<VerilogAnalyzer, OneStatementPerLineRule>(kTestCases);
 }
