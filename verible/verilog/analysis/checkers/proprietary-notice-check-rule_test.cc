@@ -29,29 +29,31 @@ namespace {
 using verible::LintTestCase;
 using verible::RunLintTestCases;
 
-// Tests that files with PROPRIETARY NOTICE are accepted.
+// Tests that files with PROPRIETARY NOTICE before module are accepted.
 TEST(ProprietaryNoticeCheckRuleTest, AcceptsText) {
   const std::initializer_list<LintTestCase> kTestCases = {
-      // Has PROPRIETARY NOTICE in single-line comment
+      // Has PROPRIETARY NOTICE before module - should pass
       {"// PROPRIETARY NOTICE\nmodule foo; endmodule"},
       {"// This file contains PROPRIETARY NOTICE\nmodule foo; endmodule"},
-      {"// PROPRIETARY NOTICE - Confidential\nmodule foo; endmodule"},
-      // Has PROPRIETARY NOTICE in block comment
+      {"// PROPRIETARY NOTICE - Confidential\n\nmodule foo; endmodule"},
+      // Has PROPRIETARY NOTICE in block comment before module - should pass
       {"/* PROPRIETARY NOTICE */\nmodule foo; endmodule"},
       {"/*\n * PROPRIETARY NOTICE\n * Confidential\n */\nmodule foo; "
        "endmodule"},
+      // Multiple comments before module - should pass
+      {"// Copyright 2024\n// PROPRIETARY NOTICE\nmodule foo; endmodule"},
   };
   RunLintTestCases<VerilogAnalyzer, ProprietaryNoticeCheckRule>(kTestCases);
 }
 
-// Tests that files without PROPRIETARY NOTICE are rejected.
+// Tests that files without PROPRIETARY NOTICE or with it after module are
+// rejected.
 TEST(ProprietaryNoticeCheckRuleTest, RejectsText) {
   constexpr int kToken = TK_OTHER;
-  // Simple test cases with single line
   const std::initializer_list<LintTestCase> kTestCases = {
       // No notice at all
       {"module foo; endmodule", {kToken, ""}},
-      // Has comment but no PROPRIETARY NOTICE
+      // Has comment but no PROPRIETARY NOTICE - violation at end of first line
       {"// Some comment", {kToken, ""}},
       {"// Copyright notice", {kToken, ""}},
       // Case sensitive - lowercase should fail

@@ -39,7 +39,8 @@ VERILOG_REGISTER_LINT_RULE(ProprietaryNoticeCheckRule);
 
 static constexpr std::string_view kRequiredNotice = "PROPRIETARY NOTICE";
 static constexpr std::string_view kMessage =
-    "File must contain \"PROPRIETARY NOTICE\" in the comments.";
+    "File must contain \"PROPRIETARY NOTICE\" in the comments before any "
+    "module definition.";
 
 const LintRuleDescriptor &ProprietaryNoticeCheckRule::GetDescriptor() {
   static const LintRuleDescriptor d{
@@ -47,62 +48,125 @@ const LintRuleDescriptor &ProprietaryNoticeCheckRule::GetDescriptor() {
       .topic = "copyright",
       .desc =
           "Checks that every file contains the text \"PROPRIETARY NOTICE\" "
-          "in the comments. This is typically required for proprietary or "
-          "confidential source code files.",
+          "in the comments before any module definition. This is typically "
+          "required for proprietary or confidential source code files.",
   };
   return d;
 }
 
 void ProprietaryNoticeCheckRule::Lint(const TextStructureView &text_structure,
                                       std::string_view) {
-  found_notice_ = false;
-
-  // Iterate through all lines to check for comments containing the notice
-  for (const auto &line : text_structure.Lines()) {
-    std::string_view line_view = line;
-
-    // Check if this is a comment line (starts with //)
-    if (absl::StartsWith(line_view, "//")) {
-      // Check if the line contains "PROPRIETARY NOTICE" (case-sensitive)
-      if (absl::StrContains(line_view, kRequiredNotice)) {
-        found_notice_ = true;
-        break;
-      }
-    }
-  }
-
-  // Also check in block comments (/* */)
-  // Scan the entire file content for block comments
   std::string_view contents = text_structure.Contents();
+
+  // Find the position of PROPRIETARY NOTICE
+  size_t notice_pos = std::string_view::npos;
+
+  // Check in single-line comments
   size_t pos = 0;
   while (pos < contents.size()) {
-    // Find start of block comment
-    size_t block_start = contents.find("/*", pos);
-    if (block_start == std::string_view::npos) {
+    // Find next // comment
+    size_t comment_start = contents.find("//", pos);
+    if (comment_start == std::string_view::npos) {
       break;
     }
 
-    // Find end of block comment
-    size_t block_end = contents.find("*/", block_start + 2);
-    if (block_end == std::string_view::npos) {
-      // Unclosed block comment, check what we have
-      block_end = contents.size();
-    } else {
-      block_end += 2;  // Include the closing */
+    // Find end of this line
+    size_t line_end = contents.find('\n', comment_start);
+    if (line_end == std::string_view::npos) {
+      line_end = contents.size();
     }
 
-    std::string_view block_comment =
-        contents.substr(block_start, block_end - block_start);
-    if (absl::StrContains(block_comment, kRequiredNotice)) {
-      found_notice_ = true;
+    // Extract the comment text (excluding //)
+    std::string_view comment_text =
+        contents.substr(comment_start + 2, line_end - comment_start - 2);
+    if (absl::StrContains(comment_text, kRequiredNotice)) {
+      notice_pos = comment_start;
       break;
     }
 
-    pos = block_end;
+    pos = line_end + 1;
   }
 
-  // If notice not found, report violation at the end of the first line
-  if (!found_notice_) {
+  // Check in block comments if not found yet
+  if (notice_pos == std::string_view::npos) {
+    pos = 0;
+    while (pos < contents.size()) {
+      size_t block_start = contents.find("/*", pos);
+      if (block_start == std::string_view::npos) {
+        break;
+      }
+
+      size_t block_end = contents.find("*/", block_start + 2);
+      if (block_end == std::string_view::npos) {
+        block_end = contents.size();
+      } else {
+        block_end += 2;
+      }
+
+      std::string_view block_comment =
+          contents.substr(block_start, block_end - block_start);
+      if (absl::StrContains(block_comment, kRequiredNotice)) {
+        notice_pos = block_start;
+        break;
+      }
+
+      pos = block_end;
+    }
+  }
+
+  // Find the position of the first module definition
+  size_t module_pos = std::string_view::npos;
+
+  // Look for "module" keyword that's not in a comment
+  pos = 0;
+  while (pos < contents.size()) {
+    size_t module_keyword = contents.find("module", pos);
+    if (module_keyword == std::string_view::npos) {
+      break;
+    }
+
+    // Check if this "module" is inside a string or comment
+    // Simple check: see if it's preceded by // on the same line
+    size_t line_start = contents.rfind('\n', module_keyword);
+    if (line_start == std::string_view::npos) {
+      line_start = 0;
+    } else {
+      line_start += 1;  // Skip the newline
+    }
+
+    std::string_view line_before =
+        contents.substr(line_start, module_keyword - line_start);
+
+    // Check if // appears before "module" on this line
+    if (line_before.find("//") == std::string_view::npos) {
+      // This is a real module definition, not in a comment
+      // Verify it's a module keyword (followed by whitespace or identifier)
+      size_t after_module = module_keyword + 6;  // length of "module"
+      if (after_module < contents.size()) {
+        char next_char = contents[after_module];
+        if (next_char == ' ' || next_char == '\t' || next_char == '\n' ||
+            next_char == '#' || next_char == '(') {
+          module_pos = module_keyword;
+          break;
+        }
+      }
+    }
+
+    pos = module_keyword + 6;
+  }
+
+  // Check if notice exists and is before module
+  bool violation_found = false;
+
+  if (notice_pos == std::string_view::npos) {
+    // No PROPRIETARY NOTICE found at all
+    violation_found = true;
+  } else if (module_pos != std::string_view::npos && notice_pos > module_pos) {
+    // PROPRIETARY NOTICE found but after module definition
+    violation_found = true;
+  }
+
+  if (violation_found) {
     const auto &lines = text_structure.Lines();
     if (!lines.empty()) {
       std::string_view first_line = lines.front();
