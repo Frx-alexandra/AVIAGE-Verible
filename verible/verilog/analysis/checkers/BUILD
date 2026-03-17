@@ -49,6 +49,7 @@ cc_library(
         ":legacy-genvar-declaration-rule",
         ":line-length-rule",
         ":macro-name-style-rule",
+        ":forbidden-name-constant-with-value-rule",
         ":macro-string-concatenation-rule",
         ":mismatched-labels-rule",
         ":module-begin-block-rule",
@@ -1769,6 +1770,39 @@ cc_test(
     srcs = ["macro-name-style-rule_test.cc"],
     deps = [
         ":macro-name-style-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:token-stream-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "forbidden-name-constant-with-value-rule",
+    srcs = ["forbidden-name-constant-with-value-rule.cc"],
+    hdrs = ["forbidden-name-constant-with-value-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:token-stream-lint-rule",
+        "//verible/common/text:token-info",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "//verible/verilog/parser:verilog-lexer",
+        "//verible/verilog/parser:verilog-token-classifications",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/strings",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "forbidden-name-constant-with-value-rule_test",
+    srcs = ["forbidden-name-constant-with-value-rule_test.cc"],
+    deps = [
+        ":forbidden-name-constant-with-value-rule",
         "//verible/common/analysis:linter-test-utils",
         "//verible/common/analysis:token-stream-linter-test-utils",
         "//verible/verilog/analysis:verilog-analyzer",
