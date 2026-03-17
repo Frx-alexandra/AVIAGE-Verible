@@ -71,6 +71,7 @@ cc_library(
         ":port-type-check-rule",
         ":positive-meaning-parameter-name-rule",
         ":posix-eof-rule",
+        ":proprietary-notice-check-rule",
         ":proper-parameter-declaration-rule",
         ":signal-name-style-rule",
         ":signal-name-prefix-rule",
@@ -311,6 +312,37 @@ cc_test(
         "//verible/common/analysis:text-structure-linter-test-utils",
         "//verible/verilog/analysis:verilog-analyzer",
         "//verible/verilog/parser:verilog-token-enum",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "proprietary-notice-check-rule",
+    srcs = ["proprietary-notice-check-rule.cc"],
+    hdrs = ["proprietary-notice-check-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:text-structure-lint-rule",
+        "//verible/common/text:text-structure",
+        "//verible/common/text:token-info",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/strings",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "proprietary-notice-check-rule_test",
+    srcs = ["proprietary-notice-check-rule_test.cc"],
+    deps = [
+        ":proprietary-notice-check-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:text-structure-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],

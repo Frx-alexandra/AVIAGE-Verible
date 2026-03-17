@@ -115,6 +115,7 @@ _linter_test_configs = [
     ("forbidden-macro", "uvm_warning", True),
     ("create-object-name-match", "object_creation_name", True),
     ("posix-eof", "posix_eof", True),
+    ("proprietary-notice-check", "proprietary_notice_check", False),
     ("no-tabs", "tabs", True),
     ("line-length", "long_line", True),
     ("no-trailing-spaces", "trailing_spaces", True),
@@ -162,12 +163,13 @@ _linter_test_configs = [
             ],
         ),
         # Verifies that all rules *except* this one is lint clean.
+        # Also exclude proprietary-notice-check as it requires PROPRIETARY NOTICE in all files.
         verilog_style_lint.test(
             name = testfilebase + "-minusrule_test",
             srcs = ["testdata/{}.sv".format(testfilebase)],
             flags = [
                 "--ruleset=all",
-                "--rules=-" + rule,  # exclude one rule
+                "--rules=-" + rule + ",-proprietary-notice-check",  # exclude this rule and proprietary-notice-check
             ],
         ),
     )
