@@ -70,6 +70,7 @@ cc_library(
         ":port-name-suffix-rule",
         ":port-type-check-rule",
         ":positive-meaning-parameter-name-rule",
+        ":modification-history-check-rule",
         ":posix-eof-rule",
         ":proprietary-notice-check-rule",
         ":proper-parameter-declaration-rule",
@@ -282,6 +283,37 @@ cc_test(
         "//verible/common/analysis:syntax-tree-linter-test-utils",
         "//verible/verilog/analysis:verilog-analyzer",
         "//verible/verilog/parser:verilog-token-enum",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "modification-history-check-rule",
+    srcs = ["modification-history-check-rule.cc"],
+    hdrs = ["modification-history-check-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:text-structure-lint-rule",
+        "//verible/common/text:text-structure",
+        "//verible/common/text:token-info",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/strings",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "modification-history-check-rule_test",
+    srcs = ["modification-history-check-rule_test.cc"],
+    deps = [
+        ":modification-history-check-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:text-structure-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
