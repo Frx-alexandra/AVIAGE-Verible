@@ -115,6 +115,7 @@ _linter_test_configs = [
     ("forbidden-macro", "uvm_warning", True),
     ("create-object-name-match", "object_creation_name", True),
     ("modification-history-check", "modification_history_check", False),
+    ("module-description-check", "module_description_check", False),
     ("posix-eof", "posix_eof", True),
     ("proprietary-notice-check", "proprietary_notice_check", False),
     ("no-tabs", "tabs", True),
@@ -170,7 +171,7 @@ _linter_test_configs = [
             srcs = ["testdata/{}.sv".format(testfilebase)],
             flags = [
                 "--ruleset=all",
-                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check",  # exclude this rule, proprietary-notice-check and modification-history-check
+                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check,-module-description-check",  # exclude this rule and notice checks
             ],
         ),
     )

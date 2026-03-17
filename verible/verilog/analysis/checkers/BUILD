@@ -71,6 +71,7 @@ cc_library(
         ":port-type-check-rule",
         ":positive-meaning-parameter-name-rule",
         ":modification-history-check-rule",
+        ":module-description-check-rule",
         ":posix-eof-rule",
         ":proprietary-notice-check-rule",
         ":proper-parameter-declaration-rule",
@@ -311,6 +312,37 @@ cc_test(
     srcs = ["modification-history-check-rule_test.cc"],
     deps = [
         ":modification-history-check-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:text-structure-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "module-description-check-rule",
+    srcs = ["module-description-check-rule.cc"],
+    hdrs = ["module-description-check-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:text-structure-lint-rule",
+        "//verible/common/text:text-structure",
+        "//verible/common/text:token-info",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/strings",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "module-description-check-rule_test",
+    srcs = ["module-description-check-rule_test.cc"],
+    deps = [
+        ":module-description-check-rule",
         "//verible/common/analysis:linter-test-utils",
         "//verible/common/analysis:text-structure-linter-test-utils",
         "//verible/verilog/analysis:verilog-analyzer",
