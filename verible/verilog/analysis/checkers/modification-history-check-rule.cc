@@ -141,14 +141,19 @@ void ModificationHistoryCheckRule::Lint(const TextStructureView &text_structure,
     // Check if // appears before "module" on this line
     if (line_before.find("//") == std::string_view::npos) {
       // This is a real module definition, not in a comment
-      // Verify it's a module keyword (followed by whitespace or identifier)
+      // Verify it's a module keyword (followed by whitespace or special char)
       size_t after_module = module_keyword + 6;  // length of "module"
       if (after_module < contents.size()) {
         char next_char = contents[after_module];
         if (next_char == ' ' || next_char == '\t' || next_char == '\n' ||
             next_char == '#' || next_char == '(') {
-          module_pos = module_keyword;
-          break;
+          // Also verify it's not part of a larger word (like " submodule")
+          if (module_keyword == 0 || contents[module_keyword - 1] == ' ' ||
+              contents[module_keyword - 1] == '\t' ||
+              contents[module_keyword - 1] == '\n') {
+            module_pos = module_keyword;
+            break;
+          }
         }
       }
     }
@@ -156,28 +161,22 @@ void ModificationHistoryCheckRule::Lint(const TextStructureView &text_structure,
     pos = module_keyword + 6;
   }
 
-  // Check if notice exists and is before module
-  bool violation_found = false;
+  // Only report violation if a module definition was found
+  if (module_pos != std::string_view::npos) {
+    bool violation_found = false;
 
-  if (notice_pos == std::string_view::npos) {
-    // No MODIFICATION HISTORY found at all
-    violation_found = true;
-  } else if (module_pos != std::string_view::npos && notice_pos > module_pos) {
-    // MODIFICATION HISTORY found but after module definition
-    violation_found = true;
-  }
+    if (notice_pos == std::string_view::npos) {
+      // No MODIFICATION HISTORY found at all
+      violation_found = true;
+    } else if (notice_pos > module_pos) {
+      // MODIFICATION HISTORY found but after module definition
+      violation_found = true;
+    }
 
-  if (violation_found) {
-    const auto &lines = text_structure.Lines();
-    if (!lines.empty()) {
-      std::string_view first_line = lines.front();
-      // Remove trailing newline if present
-      if (!first_line.empty() && first_line.back() == '\n') {
-        first_line = first_line.substr(0, first_line.length() - 1);
-      }
-      // Point to the end of the first line (0-length substring)
-      const TokenInfo token(TK_OTHER,
-                            first_line.substr(first_line.length(), 0));
+    if (violation_found) {
+      // Report violation at the "module" keyword position
+      const TokenInfo token(
+          TK_OTHER, contents.substr(module_pos, 6));  // "module" is 6 chars
       violations_.insert(LintViolation(token, kMessage));
     }
   }
