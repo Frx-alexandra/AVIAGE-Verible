@@ -108,6 +108,7 @@ _linter_test_configs = [
     ("struct-union-name-style", "struct_name_style", True),
     ("struct-union-name-style", "union_name_style", True),
     ("suspicious-semicolon", "suspicious_semicolon", False),
+    ("synchronous-reset-check", "synchronous_reset_check", False),
     ("v2001-generate-begin", "generate_begin_module", True),
     ("void-cast", "void-cast", True),
     ("undersized-binary-literal", "undersized_binary_literal", True),
@@ -171,7 +172,7 @@ _linter_test_configs = [
             srcs = ["testdata/{}.sv".format(testfilebase)],
             flags = [
                 "--ruleset=all",
-                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check,-module-description-check",  # exclude this rule and notice checks
+                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check,-module-description-check,-synchronous-reset-check",  # exclude this rule and notice checks
             ],
         ),
     )

@@ -80,6 +80,7 @@ cc_library(
         ":struct-union-name-style-rule",
         ":suggest-parentheses-rule",
         ":suspicious-semicolon-rule",
+        ":synchronous-reset-check-rule",
         ":truncated-numeric-literal-rule",
         ":undersized-binary-literal-rule",
         ":unpacked-dimensions-rule",
@@ -2650,6 +2651,44 @@ cc_test(
         "//verible/verilog/analysis:verilog-analyzer",
         "//verible/verilog/parser:verilog-token-enum",
         "@abseil-cpp//absl/log:check",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "synchronous-reset-check-rule",
+    srcs = ["synchronous-reset-check-rule.cc"],
+    hdrs = ["synchronous-reset-check-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:syntax-tree-lint-rule",
+        "//verible/common/analysis/matcher",
+        "//verible/common/analysis/matcher:bound-symbol-manager",
+        "//verible/common/text:concrete-syntax-leaf",
+        "//verible/common/text:concrete-syntax-tree",
+        "//verible/common/text:symbol",
+        "//verible/common/text:syntax-tree-context",
+        "//verible/common/text:tree-utils",
+        "//verible/verilog/CST:statement",
+        "//verible/verilog/CST:verilog-matchers",
+        "//verible/verilog/CST:verilog-nonterminals",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "//verible/verilog/parser:verilog-token-enum",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "synchronous-reset-check-rule_test",
+    srcs = ["synchronous-reset-check-rule_test.cc"],
+    deps = [
+        ":synchronous-reset-check-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:syntax-tree-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
+        "//verible/verilog/parser:verilog-token-enum",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
