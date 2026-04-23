@@ -36,6 +36,7 @@ cc_library(
         ":forbid-consecutive-null-statements-rule",
         ":forbid-defparam-rule",
         ":function-header-check-rule",
+        ":task-header-check-rule",
         ":forbid-line-continuations-rule",
         ":forbid-negative-array-dim",
         ":forbidden-anonymous-enums-rule",
@@ -2718,6 +2719,37 @@ cc_test(
     srcs = ["function-header-check-rule_test.cc"],
     deps = [
         ":function-header-check-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:text-structure-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "task-header-check-rule",
+    srcs = ["task-header-check-rule.cc"],
+    hdrs = ["task-header-check-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:text-structure-lint-rule",
+        "//verible/common/text:text-structure",
+        "//verible/common/text:token-info",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/strings",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "task-header-check-rule_test",
+    srcs = ["task-header-check-rule_test.cc"],
+    deps = [
+        ":task-header-check-rule",
         "//verible/common/analysis:linter-test-utils",
         "//verible/common/analysis:text-structure-linter-test-utils",
         "//verible/verilog/analysis:verilog-analyzer",

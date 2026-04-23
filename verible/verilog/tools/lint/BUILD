@@ -110,6 +110,7 @@ _linter_test_configs = [
     ("suspicious-semicolon", "suspicious_semicolon", False),
     ("synchronous-reset-check", "synchronous_reset_check", False),
     ("function-header-check", "function_header_check", False),
+    ("task-header-check", "task_header_check", False),
     ("v2001-generate-begin", "generate_begin_module", True),
     ("void-cast", "void-cast", True),
     ("undersized-binary-literal", "undersized_binary_literal", True),
@@ -173,7 +174,7 @@ _linter_test_configs = [
             srcs = ["testdata/{}.sv".format(testfilebase)],
             flags = [
                 "--ruleset=all",
-                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check,-module-description-check,-synchronous-reset-check,-function-header-check",  # exclude this rule and notice checks
+                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check,-module-description-check,-synchronous-reset-check,-function-header-check,-task-header-check",  # exclude this rule and notice checks
             ],
         ),
     )
