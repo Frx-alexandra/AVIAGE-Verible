@@ -309,56 +309,6 @@ jobs:
       with:
         path: kythe_output/*.kzip
 
-  MacOsBuild:
-    runs-on: macos-latest
-    steps:
-
-    - name: Install Dependencies
-      run: |
-        echo "USE_BAZEL_VERSION=7.6.1" >> $GITHUB_ENV
-
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Create Cache Timestamp
-      id: cache_timestamp
-      uses: nanzm/get-time-action@v2.0
-      with:
-        format: 'YYYY-MM-DD-HH-mm-ss'
-
-    - name: Mount bazel cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          /private/var/tmp/_bazel_runner
-        key: bazelcache_macos_${{ steps.cache_timestamp.outputs.time }}
-        restore-keys: bazelcache_macos_
-
-    - name: Tests
-      # MacOS has a broken patch utility:
-      # //verible/verilog/tools/lint:lint-tool_test trips over a no-newline-at-end-of-file
-      run: bazel test -c opt --noshow_progress --test_output=errors --cxxopt=-Wno-range-loop-analysis -- //... -//verible/verilog/tools/lint:lint-tool_test
-
-    - name: Build
-      run: |
-        bazel build -c opt --noshow_progress --test_output=errors --cxxopt=-Wno-range-loop-analysis :install-binaries
-        # Litmus test
-        bazel-bin/verible/verilog/tools/syntax/verible-verilog-syntax --version
-
-    - name: Pack up
-      run: |
-        VERSION=$(git describe --match=v*)
-        .github/bin/simple-install.sh verible-${VERSION}-macOS/bin
-        tar cvzf verible-${VERSION}-macOS.tar.gz verible-${VERSION}-macOS
-
-    - name: 📤 Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: verible-install-macos
-        path: verible-*.tar.gz
-
   PrepareVSPlugin:
     container: ubuntu:jammy
     runs-on: [self-hosted, Linux, X64, gcp-custom-runners]
@@ -473,7 +423,7 @@ jobs:
 
   Release:
     name: 📦 Release
-    needs: [ Check, PackReleaseSource, MacOsBuild, WindowsBuild, PrepareVSPlugin ]
+    needs: [ Check, PackReleaseSource, WindowsBuild, PrepareVSPlugin ]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
