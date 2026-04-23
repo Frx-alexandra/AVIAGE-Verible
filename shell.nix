@@ -45,7 +45,7 @@ verible_used_stdenv.mkDerivation {
       export CLANG_TIDY=${pkgs.llvmPackages_19.clang-tools}/bin/clang-tidy
 
       # There is too much volatility between even micro-versions of
-      # later clang-format. Let's use stable 17 for now.
+      # later clang-format. Let's use stable 18 for now.
       export CLANG_FORMAT=${pkgs.llvmPackages_18.clang-tools}/bin/clang-format
   '';
 }
