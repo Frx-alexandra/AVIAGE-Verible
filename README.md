@@ -269,14 +269,6 @@ MODE=coverage .github/bin/build-and-test.sh //foo/bar:foo_test
 .github/bin/generate-coverage-html.sh
 ```
 
-## Mailing Lists
-
-Join the Verible community!
-
-*   Developers: verible-dev@googlegroups.com
-    ([join](https://groups.google.com/forum/#!forum/verible-dev/join))
-*   Users: verible-users@googlegroups.com
-    ([join](https://groups.google.com/forum/#!forum/verible-users/join))
 
 ### Future
 
