@@ -83,6 +83,7 @@ _linter_test_configs = [
     ("macro-name-style", "macro_name_style", True),
     ("forbidden-name-constant-with-value", "forbidden_name_constant_with_value", False),
     ("macro-string-concatenation", "macro_string_concatenation", False),
+    ("multi-line-comments", "multi_line_comments", False),
     ("mismatched-labels", "mismatched_labels", False),
     ("module-begin-block", "module_begin_block", True),
     ("module-filename", "module_filename", True),
@@ -174,7 +175,7 @@ _linter_test_configs = [
             srcs = ["testdata/{}.sv".format(testfilebase)],
             flags = [
                 "--ruleset=all",
-                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check,-module-description-check,-synchronous-reset-check,-function-header-check,-task-header-check",  # exclude this rule and notice checks
+                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check,-multi-line-comments,-module-description-check,-synchronous-reset-check,-function-header-check,-task-header-check",  # exclude this rule and notice checks
             ],
         ),
     )
