@@ -50,50 +50,50 @@ static constexpr std::string_view kMessage =
     "Use only blocking assignments in \'always_comb\' combinational blocks.";
 
 const LintRuleDescriptor &AlwaysCombBlockingRule::GetDescriptor() {
-    static const LintRuleDescriptor d{
-        .name = "always-comb-blocking",
-        .topic = "combinational-logic",
-        .desc =
-            "Checks that there are no occurrences of "
-            "non-blocking assignment in combinational logic.",
-    };
-    return d;
+  static const LintRuleDescriptor d{
+      .name = "always-comb-blocking",
+      .topic = "combinational-logic",
+      .desc =
+          "Checks that there are no occurrences of "
+          "non-blocking assignment in combinational logic.",
+  };
+  return d;
 }
 
 // Matches always_comb blocks.
 static const Matcher &AlwaysCombMatcher() {
-    static const Matcher matcher(NodekAlwaysStatement(AlwaysCombKeyword()));
-    return matcher;
+  static const Matcher matcher(NodekAlwaysStatement(AlwaysCombKeyword()));
+  return matcher;
 }
 
 void AlwaysCombBlockingRule::HandleSymbol(const verible::Symbol &symbol,
                                           const SyntaxTreeContext &context) {
-    verible::matcher::BoundSymbolManager manager;
+  verible::matcher::BoundSymbolManager manager;
 
-    if (AlwaysCombMatcher().Matches(symbol, &manager)) {
-        for (const auto &match :
-            SearchSyntaxTree(symbol, NodekNonblockingAssignmentStatement())) {
-        if (match.match->Kind() != verible::SymbolKind::kNode) continue;
+  if (AlwaysCombMatcher().Matches(symbol, &manager)) {
+    for (const auto &match :
+         SearchSyntaxTree(symbol, NodekNonblockingAssignmentStatement())) {
+      if (match.match->Kind() != verible::SymbolKind::kNode) continue;
 
-        const verible::SyntaxTreeNode *node = verible::MaybeNode(match.match);
-        if (!node) return;
+      const verible::SyntaxTreeNode *node = verible::MaybeNode(match.match);
+      if (!node) return;
 
-        const verible::SyntaxTreeLeaf *leaf = verible::GetSubtreeAsLeaf(
-            *node, NodeEnum::kNonblockingAssignmentStatement, 1);
+      const verible::SyntaxTreeLeaf *leaf = verible::GetSubtreeAsLeaf(
+          *node, NodeEnum::kNonblockingAssignmentStatement, 1);
 
-        if (leaf && leaf->get().token_enum() == TK_LE) {
-            violations_.insert(
-                LintViolation(*leaf, kMessage, match.context,
-                            {AutoFix("Use blocking assignment '=' instead of "
-                                    "nonblocking assignment '<='",
-                                    {leaf->get(), "="})}));
-        }
-        }
+      if (leaf && leaf->get().token_enum() == TK_LE) {
+        violations_.insert(
+            LintViolation(*leaf, kMessage, match.context,
+                          {AutoFix("Use blocking assignment '=' instead of "
+                                   "nonblocking assignment '<='",
+                                   {leaf->get(), "="})}));
+      }
     }
+  }
 }
 
 LintRuleStatus AlwaysCombBlockingRule::Report() const {
-    return LintRuleStatus(violations_, GetDescriptor());
+  return LintRuleStatus(violations_, GetDescriptor());
 }
 
 }  // namespace analysis
