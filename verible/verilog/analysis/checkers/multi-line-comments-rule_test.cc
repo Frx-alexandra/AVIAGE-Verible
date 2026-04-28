@@ -444,6 +444,54 @@ TEST(MultiLineCommentsRuleTest, ExplicitNoLengthCheck) {
       kTestCases, "sign_count:0");
 }
 
+// Tests that CRLF line endings (Windows) work correctly
+TEST(MultiLineCommentsRuleTest, AcceptsCRLFLineEndings) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Valid multi-line comment with CRLF endings
+      {"//==========================================================\r\n"
+       "// comment line 1\r\n"
+       "//==========================================================\r\n"},
+      // Multiple content lines with CRLF
+      {"//====\r\n"
+       "// line 1\r\n"
+       "// line 2\r\n"
+       "//====\r\n"},
+      // Mixed content with CRLF
+      {"//------------------------------\r\n"
+       "// Description here\r\n"
+       "// More text\r\n"
+       "//------------------------------\r\n"},
+  };
+  RunLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(kTestCases);
+}
+
+// Tests that mixed line endings work correctly
+TEST(MultiLineCommentsRuleTest, AcceptsMixedLineEndings) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // CRLF opening, LF content, CRLF closing
+      {"//====\r\n"
+       "// comment\n"
+       "//====\r\n"},
+      // Old Mac CR endings
+      {"//====\r"
+       "// comment\r"
+       "//====\r"},
+  };
+  RunLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(kTestCases);
+}
+
+// Tests that CRLF line endings work with sign_count
+TEST(MultiLineCommentsRuleTest, CRLFWithSignCount) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // 40 chars with CRLF
+      {"//======================================\r\n"
+       "// comment\r\n"
+       "//======================================\r\n"},
+  };
+  RunConfiguredLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(
+      kTestCases, "sign_count:40");
+}
+
 }  // namespace
 }  // namespace analysis
 }  // namespace verilog

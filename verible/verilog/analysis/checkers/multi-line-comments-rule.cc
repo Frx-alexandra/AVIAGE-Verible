@@ -70,6 +70,23 @@ const LintRuleDescriptor &MultiLineCommentsRule::GetDescriptor() {
   return d;
 }
 
+// Helper function to strip line endings (both LF and CRLF)
+static std::string_view StripLineEnding(std::string_view line) {
+  // Strip \r\n (CRLF - Windows)
+  if (absl::EndsWith(line, "\r\n")) {
+    return line.substr(0, line.size() - 2);
+  }
+  // Strip \n (LF - Unix/Linux)
+  if (absl::EndsWith(line, "\n")) {
+    return line.substr(0, line.size() - 1);
+  }
+  // Strip \r (CR - old Mac)
+  if (absl::EndsWith(line, "\r")) {
+    return line.substr(0, line.size() - 1);
+  }
+  return line;
+}
+
 // Helper function to check if a line is a valid border
 // Returns the border pattern (content after "//") if valid, empty string
 // otherwise
@@ -117,11 +134,6 @@ void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
                                  std::string_view) {
   size_t lineno = 0;
   for (const auto &line : text_structure.Lines()) {
-    std::string_view line_full = line;
-    std::string_view line_stripped = line_full;
-    if (absl::EndsWith(line_stripped, "\n"))
-      line_stripped = line_stripped.substr(0, line_stripped.size() - 1);
-
     if (absl::StartsWith(line, "//")) {
       // Find the start of a potential multi-line comment block
       size_t start_line = lineno;
@@ -137,17 +149,13 @@ void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
 
       if (block_size > 1) {  // Multi-line comment block
         // Check first line
-        std::string_view first_full = text_structure.Lines()[start_line];
-        std::string_view first_stripped = first_full;
-        if (absl::EndsWith(first_stripped, "\n"))
-          first_stripped = first_stripped.substr(0, first_stripped.size() - 1);
+        std::string_view first_stripped =
+            StripLineEnding(text_structure.Lines()[start_line]);
         std::string_view first_border = IsBorderLine(first_stripped);
 
         // Check last line
-        std::string_view last_full = text_structure.Lines()[end_line - 1];
-        std::string_view last_stripped = last_full;
-        if (absl::EndsWith(last_stripped, "\n"))
-          last_stripped = last_stripped.substr(0, last_stripped.size() - 1);
+        std::string_view last_stripped =
+            StripLineEnding(text_structure.Lines()[end_line - 1]);
         std::string_view last_border = IsBorderLine(last_stripped);
 
         // Both must be valid borders and must match exactly
