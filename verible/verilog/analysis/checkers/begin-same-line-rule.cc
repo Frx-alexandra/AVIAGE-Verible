@@ -167,12 +167,14 @@ bool BeginSameLineRule::HandleTokenStateMachine(const TokenInfo &token) {
           condition_expr_level_ = 0;
           start_token_ = token;
           seen_newline_since_start_ = false;
+          seen_newline_in_condition_ = false;  // Reset flag for new condition
           state_ = State::kInCondition;
           break;
         case TK_always:
           condition_expr_level_ = 0;
           start_token_ = token;
           seen_newline_since_start_ = false;
+          seen_newline_in_condition_ = false;  // Reset flag
           state_ = State::kInAlways;
           break;
         case TK_else:
@@ -199,6 +201,7 @@ bool BeginSameLineRule::HandleTokenStateMachine(const TokenInfo &token) {
           break;
         case '(':
           condition_expr_level_++;
+          seen_newline_in_condition_ = false;  // Reset flag when entering condition
           state_ = State::kInCondition;
           break;
         default:
@@ -214,6 +217,7 @@ bool BeginSameLineRule::HandleTokenStateMachine(const TokenInfo &token) {
             condition_expr_level_ = 0;
             start_token_ = token;
             seen_newline_since_start_ = false;
+            seen_newline_in_condition_ = false;  // Reset flag for else-if
             state_ = State::kInCondition;
           } else {
             state_ = State::kNormal;
@@ -253,7 +257,8 @@ bool BeginSameLineRule::HandleTokenStateMachine(const TokenInfo &token) {
     case State::kExpectBegin: {
       switch (token.token_enum()) {
         case TK_begin: {
-          if (seen_newline_since_start_) {
+          // Skip the check if the condition itself had newlines (multi-line condition)
+          if (seen_newline_since_start_ && !seen_newline_in_condition_) {
             raise_violation = true;
           }
           state_ = State::kNormal;
@@ -317,6 +322,10 @@ bool BeginSameLineRule::HandleTokenStateMachine(const TokenInfo &token) {
 void BeginSameLineRule::HandleToken(const TokenInfo &token) {
   if (token.token_enum() == TK_NEWLINE) {
     seen_newline_since_start_ = true;
+    // Also track newlines inside conditions
+    if (state_ == State::kInCondition) {
+      seen_newline_in_condition_ = true;
+    }
     return;
   }
 

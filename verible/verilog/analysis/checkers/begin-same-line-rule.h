@@ -89,6 +89,9 @@ class BeginSameLineRule : public verible::TokenStreamLintRule {
   // Flag to track if we've seen a newline since start_token_
   bool seen_newline_since_start_{false};
 
+  // Flag to track if we've seen a newline inside the condition (between parens)
+  bool seen_newline_in_condition_{false};
+
   // Flag to track if we've seen a newline since start_token_
   bool seen_newline_{false};
 

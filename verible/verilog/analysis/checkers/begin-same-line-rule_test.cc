@@ -89,6 +89,67 @@ TEST(BeginSameLineRuleTest, AcceptsStatementsWithoutBegin) {
   RunLintTestCases<VerilogAnalyzer, BeginSameLineRule>(kTestCases);
 }
 
+// Tests that multi-line conditions don't require begin on same line
+TEST(BeginSameLineRuleTest, AcceptsMultiLineConditions) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Multi-line if condition - begin can be on next line
+      {"if (condition1 &&\n"
+       "    condition2 &&\n"
+       "    condition3)\n"
+       "  begin\n"
+       "    a <= 1;\n"
+       "  end"},
+      
+      // Multi-line for condition
+      {"for (int i = 0;\n"
+       "     i < 10;\n"
+       "     i++)\n"
+       "  begin\n"
+       "    a <= i;\n"
+       "  end"},
+      
+      // Multi-line while condition
+      {"while (a < 3 &&\n"
+       "       b > 5)\n"
+       "  begin\n"
+       "    a = a + 1;\n"
+       "  end"},
+      
+      // Multi-line foreach condition
+      {"foreach (array[i,\n"
+       "               j])\n"
+       "  begin\n"
+       "    sum += array[i][j];\n"
+       "  end"},
+      
+      // Multi-line else-if condition
+      {"else if (cond1 ||\n"
+       "         cond2)\n"
+       "  begin\n"
+       "    a <= 1;\n"
+       "  end"},
+      
+      // Multi-line always @ condition
+      {"always @ (posedge clk or\n"
+       "          negedge rst_n)\n"
+       "  begin\n"
+       "    if (rst_n) a <= 0;\n"
+       "  end"},
+  };
+  RunLintTestCases<VerilogAnalyzer, BeginSameLineRule>(kTestCases);
+}
+
+// Tests that single-line conditions still require begin on same line
+TEST(BeginSameLineRuleTest, SingleLineConditionStillRequiresSameLine) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Single-line condition, begin on next line - should fail
+      {{TK_if, "if"}, " (condition)\n begin a <= 1; end"},
+      {{TK_for, "for"}, " (i = 0; i < 10; i++)\n begin a <= 1; end"},
+      {{TK_while, "while"}, " (a < 3)\n begin a <= 1; end"},
+  };
+  RunLintTestCases<VerilogAnalyzer, BeginSameLineRule>(kTestCases);
+}
+
 }  // namespace
 }  // namespace analysis
 }  // namespace verilog
