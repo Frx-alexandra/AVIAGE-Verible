@@ -54,6 +54,7 @@ void OneStatementPerLineRule::HandleToken(const TokenInfo &token) {
   if (token_enum == TK_NEWLINE) {
     seen_newline_ = true;
     violation_reported_on_line_ = false;
+    after_semicolon_ = false;  // Clear after_semicolon when we see a newline
     return;
   }
 

@@ -104,6 +104,30 @@ TEST(OneStatementPerLineRuleTest, RejectTests) {
   RunLintTestCases<VerilogAnalyzer, OneStatementPerLineRule>(kTestCases);
 }
 
+// Tests that consecutive assign statements on separate lines are accepted
+TEST(OneStatementPerLineRuleTest, ConsecutiveAssignStatements) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Multiple assign statements on separate lines should be OK
+      {"assign a = 1;\nassign b = 2;\nassign c = 3;"},
+      
+      // Multiple assign statements in module
+      {"module t;\n"
+       "  assign a = 1;\n"
+       "  assign b = 2;\n"
+       "  assign c = 3;\n"
+       "  assign d = 4;\n"
+       "endmodule"},
+      
+      // Mix of assign statements and other statements
+      {"module t;\n"
+       "  assign a = 1;\n"
+       "  wire w;\n"
+       "  assign b = 2;\n"
+       "endmodule"},
+  };
+  RunLintTestCases<VerilogAnalyzer, OneStatementPerLineRule>(kTestCases);
+}
+
 }  // namespace
 }  // namespace analysis
 }  // namespace verilog
