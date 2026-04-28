@@ -30,7 +30,6 @@
 namespace verilog {
 namespace analysis {
 
-static constexpr std::string_view kDefaultBorderRegex = "^//={58}$";
 static constexpr std::string_view kDefaultCommentRegex = "^//\\s*.*$";
 
 // Detects whether multi-line comments are surrounded by uniform format.
@@ -41,10 +40,9 @@ class MultiLineCommentsRule : public verible::TextStructureLintRule {
   static const LintRuleDescriptor &GetDescriptor();
 
   MultiLineCommentsRule()
-      : border_regex_(
-            std::make_unique<re2::RE2>(kDefaultBorderRegex, re2::RE2::Quiet)),
-        comment_regex_(std::make_unique<re2::RE2>(kDefaultCommentRegex,
-                                                  re2::RE2::Quiet)) {}
+      : comment_regex_(
+            std::make_unique<re2::RE2>(kDefaultCommentRegex, re2::RE2::Quiet)),
+        sign_count_(0) {}  // Default: 0 means no length check
 
   absl::Status Configure(std::string_view configuration) final;
 
@@ -56,19 +54,36 @@ class MultiLineCommentsRule : public verible::TextStructureLintRule {
   // Collection of found violations.
   std::set<verible::LintViolation> violations_;
 
-  // Configurable regex patterns for border and comment format
-  std::unique_ptr<re2::RE2> border_regex_;
+  // Configurable regex pattern for comment format
   std::unique_ptr<re2::RE2> comment_regex_;
 
-  // Default comment border format message
-  std::string format_message_ =
-      "two forward slashes followed by 58 equal signs";
+  // Number of repeated characters required for border (default: 0 = no length
+  // check)
+  int sign_count_;
 
   std::string CreateViolationMessage() {
-    return absl::StrCat(
-        "Multi-line comments must be surrounded by uniform format: ",
-        format_message_, ".");
+    if (sign_count_ > 0) {
+      return absl::StrCat(
+          "Multi-line comments must be surrounded by uniform format: "
+          "total length of ",
+          sign_count_,
+          " characters including '//' "
+          "(e.g., '//' + ",
+          (sign_count_ - 2),
+          " repeated characters like "
+          "=, -, *, #, or /). Both opening and closing borders must use the "
+          "same character and length.");
+    } else {
+      return "Multi-line comments must be surrounded by borders with the same "
+             "repeated character (=, -, *, #, or /). Opening and closing "
+             "borders must match exactly.";
+    }
   }
+
+  // Helper function to check if a line is a valid border
+  // Returns the border pattern (content after "//") if valid, empty string
+  // otherwise
+  std::string_view IsBorderLine(std::string_view line) const;
 };
 
 }  // namespace analysis

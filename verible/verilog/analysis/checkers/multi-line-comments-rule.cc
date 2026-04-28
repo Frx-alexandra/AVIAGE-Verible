@@ -18,7 +18,6 @@
 #include <set>
 #include <string>
 #include <string_view>
-#include <vector>
 
 #include "absl/status/status.h"
 #include "absl/strings/match.h"
@@ -44,8 +43,9 @@ using verible::TokenInfo;
 VERILOG_REGISTER_LINT_RULE(MultiLineCommentsRule);
 
 static constexpr std::string_view kDefaultMessage =
-    "Multi-line comments must be surrounded by uniform format: // followed by "
-    "58 equal signs.";
+    "Multi-line comments must be surrounded by borders with the same "
+    "repeated character (=, -, *, #, or /). Opening and closing borders "
+    "must match exactly.";
 
 const LintRuleDescriptor &MultiLineCommentsRule::GetDescriptor() {
   static const LintRuleDescriptor d{
@@ -53,35 +53,74 @@ const LintRuleDescriptor &MultiLineCommentsRule::GetDescriptor() {
       .topic = "comments",
       .desc =
           "Checks that multi-line comments (consecutive // lines) are "
-          "surrounded "
-          "by a uniform format defined by RE2 regular expressions. Default "
-          "border regex expects // followed by 58 equal signs. Configurable "
-          "via 'border_regex' and 'comment_regex' options.",
-      .param = {{"border_regex", std::string(kDefaultBorderRegex),
-                 "A regex used to check multi-line comment border format."},
-                {"comment_regex", std::string(kDefaultCommentRegex),
-                 "A regex used to check multi-line comment content format."}},
+          "surrounded by borders with repeated characters. Borders must use "
+          "one of: =, -, *, #, /. Both opening and closing borders must "
+          "match exactly (same character and length). If 'sign_count' is "
+          "specified (> 0), borders must have that exact total length "
+          "including '//'. If not set (0), only matching is required. "
+          "Configurable via 'sign_count' and 'comment_regex' options.",
+      .param =
+          {{"sign_count", "0",
+            "Total length of border line including '//' prefix. "
+            "Set to 0 (default) to only check that borders match, "
+            "or set to a specific value (e.g., 60) to enforce exact length."},
+           {"comment_regex", std::string(kDefaultCommentRegex),
+            "A regex used to check multi-line comment content format."}},
   };
   return d;
 }
 
+// Helper function to check if a line is a valid border
+// Returns the border pattern (content after "//") if valid, empty string
+// otherwise
+std::string_view MultiLineCommentsRule::IsBorderLine(
+    std::string_view line) const {
+  // Check if line starts with "//"
+  if (!absl::StartsWith(line, "//")) {
+    return "";
+  }
+
+  // Skip the "//" prefix
+  std::string_view content = line.substr(2);
+
+  // Check if content is empty
+  if (content.empty()) {
+    return "";
+  }
+
+  char first_char = content[0];
+
+  // Check if first character is one of the allowed characters
+  if (first_char != '=' && first_char != '-' && first_char != '*' &&
+      first_char != '#' && first_char != '/') {
+    return "";
+  }
+
+  // Check if all characters are the same
+  for (char c : content) {
+    if (c != first_char) {
+      return "";
+    }
+  }
+
+  // If sign_count is set (> 0), check total length
+  if (sign_count_ > 0) {
+    if (line.size() != static_cast<size_t>(sign_count_)) {
+      return "";
+    }
+  }
+
+  return content;
+}
+
 void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
                                  std::string_view) {
-  // Use configured regex patterns
-  const re2::RE2 &border_regex = *border_regex_;
-  const re2::RE2 &comment_regex = *comment_regex_;
-
-  std::vector<size_t> border_lines;
-
   size_t lineno = 0;
   for (const auto &line : text_structure.Lines()) {
     std::string_view line_full = line;
     std::string_view line_stripped = line_full;
     if (absl::EndsWith(line_stripped, "\n"))
       line_stripped = line_stripped.substr(0, line_stripped.size() - 1);
-    if (RE2::FullMatch(line_stripped, border_regex)) {
-      border_lines.push_back(lineno);
-    }
 
     if (absl::StartsWith(line, "//")) {
       // Find the start of a potential multi-line comment block
@@ -97,26 +136,29 @@ void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
       size_t block_size = end_line - start_line;
 
       if (block_size > 1) {  // Multi-line comment block
-        // Check if proper
+        // Check first line
         std::string_view first_full = text_structure.Lines()[start_line];
         std::string_view first_stripped = first_full;
         if (absl::EndsWith(first_stripped, "\n"))
           first_stripped = first_stripped.substr(0, first_stripped.size() - 1);
-        bool first_is_border = RE2::FullMatch(first_stripped, border_regex);
+        std::string_view first_border = IsBorderLine(first_stripped);
 
+        // Check last line
         std::string_view last_full = text_structure.Lines()[end_line - 1];
         std::string_view last_stripped = last_full;
         if (absl::EndsWith(last_stripped, "\n"))
           last_stripped = last_stripped.substr(0, last_stripped.size() - 1);
-        bool last_is_border = RE2::FullMatch(last_stripped, border_regex);
+        std::string_view last_border = IsBorderLine(last_stripped);
 
-        if (!(first_is_border && last_is_border)) {
+        // Both must be valid borders and must match exactly
+        if (first_border.empty() || last_border.empty() ||
+            first_border != last_border) {
           // violation only on the last line of multi-line comment block
           std::string violation_msg = CreateViolationMessage();
           size_t last_violation_line = end_line - 1;
-          std::string_view last_full =
+          std::string_view last_violation_full =
               text_structure.Lines()[last_violation_line];
-          TokenInfo token(TK_OTHER, last_full);
+          TokenInfo token(TK_OTHER, last_violation_full);
           violations_.insert(LintViolation(token, violation_msg));
         }
       }
@@ -126,37 +168,16 @@ void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
     }
     ++lineno;
   }
-
-  // Check between borders
-  for (size_t i = 0; i + 1 < border_lines.size(); ++i) {
-    size_t start = border_lines[i] + 1;
-    size_t end = border_lines[i] + 1;
-    for (size_t j = start; j < end; ++j) {
-      std::string_view j_full = text_structure.Lines()[j];
-      std::string_view j_stripped = j_full;
-      if (absl::EndsWith(j_stripped, "\n"))
-        j_stripped = j_stripped.substr(0, j_stripped.size() - 1);
-      if (!RE2::FullMatch(j_stripped, comment_regex)) {
-        std::string violation_msg = CreateViolationMessage();
-        TokenInfo token(TK_OTHER, j_full);
-        violations_.insert(LintViolation(token, violation_msg));
-      }
-    }
-  }
 }
 
 absl::Status MultiLineCommentsRule::Configure(std::string_view configuration) {
+  using verible::config::SetInt;
   using verible::config::SetRegex;
   absl::Status s = verible::ParseNameValues(
       configuration, {
-                         {"border_regex", SetRegex(&border_regex_)},
+                         {"sign_count", SetInt(&sign_count_)},
                          {"comment_regex", SetRegex(&comment_regex_)},
                      });
-
-  if (s.ok()) {
-    format_message_ =
-        "regex pattern: " + border_regex_->pattern() + " (user-defined)";
-  }
 
   return s;
 }
