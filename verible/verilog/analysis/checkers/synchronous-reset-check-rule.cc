@@ -15,6 +15,7 @@
 #include "verible/verilog/analysis/checkers/synchronous-reset-check-rule.h"
 
 #include <cctype>
+#include <functional>
 #include <set>
 #include <string_view>
 #include <vector>
@@ -50,7 +51,12 @@ static constexpr std::string_view kMessageAsyncReset =
     "signal, reset should be checked inside the block.";
 
 static constexpr std::string_view kMessageNoReset =
-    "Synchronous reset required: block must check a reset signal.";
+    "Synchronous reset required: block must check a reset signal in the first "
+    "if condition.";
+
+static constexpr std::string_view kMessageResetNotFirst =
+    "Synchronous reset required: reset signal must be checked in the first if "
+    "condition of the block.";
 
 static constexpr std::string_view kMessageNoClock =
     "Synchronous reset required: sensitivity list must contain a clock signal "
@@ -64,7 +70,7 @@ const LintRuleDescriptor &SynchronousResetCheckRule::GetDescriptor() {
           "Checks that always blocks use synchronous reset: sensitivity list "
           "should only contain a clock signal (name containing 'clk' or "
           "'clock'), and the block should check a reset signal (name "
-          "containing 'rst' or 'reset').",
+          "containing 'rst' or 'reset') in the first if condition.",
   };
   return d;
 }
@@ -110,38 +116,107 @@ static std::vector<std::string_view> ExtractSensitivitySignals(
   return signals;
 }
 
-// Check if the always block contains a reset signal check
-bool SynchronousResetCheckRule::HasResetCheck(
+// Find the first if statement in the always block body
+static const verible::SyntaxTreeNode *FindFirstIfStatement(
     const verible::Symbol &always_statement) {
-  // Search for all SymbolIdentifier leaves in the statement body
-  const auto &matches =
-      verible::SearchSyntaxTree(always_statement, SymbolIdentifierLeaf());
+  // Get the always statement node
+  const auto &always_node = verible::SymbolCastToNode(always_statement);
 
-  for (const auto &match : matches) {
-    // Skip identifiers in the sensitivity list (first part of always statement)
-    // by checking if we're inside an EventControl node
-    bool in_event_control = false;
-    for (const auto *node : match.context) {
-      if (node->Kind() == verible::SymbolKind::kNode) {
+  // Get the procedural timing control statement (contains event control)
+  const auto *proc_timing_ctrl =
+      GetProceduralTimingControlFromAlways(always_node);
+  if (!proc_timing_ctrl) {
+    return nullptr;
+  }
+
+  // Get the statement body (after the event control)
+  const auto *statement_body =
+      GetProceduralTimingControlStatementBody(*proc_timing_ctrl);
+  if (!statement_body) {
+    return nullptr;
+  }
+
+  // Search for conditional statements (if statements) in the body
+  const auto &conditional_matches =
+      verible::SearchSyntaxTree(*statement_body, NodekConditionalStatement());
+
+  // Find the first conditional statement that is not nested inside another
+  // conditional
+  for (const auto &match : conditional_matches) {
+    // Check if this conditional is the top-level one by verifying
+    // there are no other conditional statements in its context
+    bool is_top_level = true;
+    for (const auto *context_node : match.context) {
+      if (context_node->Kind() == verible::SymbolKind::kNode) {
         const auto &node_ref =
-            static_cast<const verible::SyntaxTreeNode &>(*node);
-        if (node_ref.Tag().tag == static_cast<int>(NodeEnum::kEventControl)) {
-          in_event_control = true;
+            static_cast<const verible::SyntaxTreeNode &>(*context_node);
+        if (node_ref.Tag().tag ==
+            static_cast<int>(NodeEnum::kConditionalStatement)) {
+          is_top_level = false;
           break;
         }
       }
     }
 
-    if (!in_event_control) {
-      if (const auto *leaf = verible::GetLeftmostLeaf(*match.match)) {
-        if (IsResetSignal(leaf->get().text())) {
-          return true;
-        }
+    if (is_top_level && match.match->Kind() == verible::SymbolKind::kNode) {
+      return &verible::SymbolCastToNode(*match.match);
+    }
+  }
+
+  return nullptr;
+}
+
+// Check if an expression contains a reset signal
+static bool ExpressionContainsResetSignal(
+    const verible::Symbol &expression,
+    const std::function<bool(std::string_view)> &is_reset) {
+  // Search for all identifiers in the expression
+  const auto &matches =
+      verible::SearchSyntaxTree(expression, SymbolIdentifierLeaf());
+
+  for (const auto &match : matches) {
+    if (const auto *leaf = verible::GetLeftmostLeaf(*match.match)) {
+      if (is_reset(leaf->get().text())) {
+        return true;
       }
     }
   }
 
   return false;
+}
+
+// Check if the always block has a reset check in the first if condition
+bool SynchronousResetCheckRule::HasResetCheck(
+    const verible::Symbol &always_statement) {
+  // Find the first if statement in the always block
+  const auto *first_if = FindFirstIfStatement(always_statement);
+  if (!first_if) {
+    return false;  // No if statement found
+  }
+
+  // Get the if clause from the conditional statement
+  const auto *if_clause = GetConditionalStatementIfClause(*first_if);
+  if (!if_clause) {
+    return false;
+  }
+
+  // Get the if header (contains the condition)
+  const auto *if_header = GetIfClauseHeader(*if_clause);
+  if (!if_header) {
+    return false;
+  }
+
+  // Get the expression from the if header
+  const auto *expression = GetIfHeaderExpression(*if_header);
+  if (!expression) {
+    return false;
+  }
+
+  // Check if the expression contains a reset signal
+  return ExpressionContainsResetSignal(
+      *expression, [](std::string_view name) -> bool {
+        return SynchronousResetCheckRule::IsResetSignal(name);
+      });
 }
 
 void SynchronousResetCheckRule::HandleSymbol(const verible::Symbol &symbol,

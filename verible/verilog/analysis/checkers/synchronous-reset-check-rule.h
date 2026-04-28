@@ -29,7 +29,7 @@ namespace analysis {
 
 // SynchronousResetCheckRule checks that all always blocks:
 // 1. Have exactly one clock signal in the sensitivity list
-// 2. Have a synchronous reset check inside the block
+// 2. Have a synchronous reset check in the first if condition inside the block
 // Clock signals are identified by containing "clk" or "clock"
 // (case-insensitive) Reset signals are identified by containing "rst" or
 // "reset" (case-insensitive)
