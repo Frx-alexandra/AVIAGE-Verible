@@ -51,11 +51,12 @@ static constexpr std::string_view kMessageAsyncReset =
     "or 'clock').";
 
 static constexpr std::string_view kMessageNoReset =
-    "A reset signal should include in the first if condition (name ontaining "
+    "A reset signal should be included in the first if condition (name containing "
     "'rst' or 'reset').";
 
 static constexpr std::string_view kMessageNoClock =
-    "Sensitivity list should only have one clock signal.";
+    "Sensitivity list should only have one clock signal (name containing 'clk' "
+    "or 'clock').";
 
 const LintRuleDescriptor &SynchronousResetCheckRule::GetDescriptor() {
   static const LintRuleDescriptor d{
