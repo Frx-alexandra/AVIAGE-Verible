@@ -47,20 +47,15 @@ using verible::matcher::Matcher;
 VERILOG_REGISTER_LINT_RULE(SynchronousResetCheckRule);
 
 static constexpr std::string_view kMessageAsyncReset =
-    "Synchronous reset required: sensitivity list should only contain clock "
-    "signal, reset should be checked inside the block.";
+    "Sensitivity list should only have one clock signal (name containing 'clk' "
+    "or 'clock').";
 
 static constexpr std::string_view kMessageNoReset =
-    "Synchronous reset required: block must check a reset signal in the first "
-    "if condition.";
-
-static constexpr std::string_view kMessageResetNotFirst =
-    "Synchronous reset required: reset signal must be checked in the first if "
-    "condition of the block.";
+    "A reset signal should include in the first if condition (name ontaining "
+    "'rst' or 'reset').";
 
 static constexpr std::string_view kMessageNoClock =
-    "Synchronous reset required: sensitivity list must contain a clock signal "
-    "(containing 'clk' or 'clock').";
+    "Sensitivity list should only have one clock signal.";
 
 const LintRuleDescriptor &SynchronousResetCheckRule::GetDescriptor() {
   static const LintRuleDescriptor d{
@@ -69,7 +64,7 @@ const LintRuleDescriptor &SynchronousResetCheckRule::GetDescriptor() {
       .desc =
           "Checks that always blocks use synchronous reset: sensitivity list "
           "should only contain a clock signal (name containing 'clk' or "
-          "'clock'), and the block should check a reset signal (name "
+          "'clock'), and the block should have a reset signal (name "
           "containing 'rst' or 'reset') in the first if condition.",
   };
   return d;
