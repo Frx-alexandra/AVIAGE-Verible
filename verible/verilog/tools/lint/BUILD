@@ -109,6 +109,7 @@ _linter_test_configs = [
     ("struct-union-name-style", "struct_name_style", True),
     ("struct-union-name-style", "union_name_style", True),
     ("suspicious-semicolon", "suspicious_semicolon", False),
+    ("signal-initialization", "signal_initialization", False),
     ("synchronous-reset-check", "synchronous_reset_check", False),
     ("function-header-check", "function_header_check", False),
     ("task-header-check", "task_header_check", False),
@@ -175,7 +176,7 @@ _linter_test_configs = [
             srcs = ["testdata/{}.sv".format(testfilebase)],
             flags = [
                 "--ruleset=all",
-                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check,-multi-line-comments,-module-description-check,-synchronous-reset-check,-function-header-check,-task-header-check",  # exclude this rule and notice checks
+                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check,-multi-line-comments,-module-description-check,-signal-initialization,-synchronous-reset-check,-function-header-check,-task-header-check",  # exclude this rule and notice checks
             ],
         ),
     )
