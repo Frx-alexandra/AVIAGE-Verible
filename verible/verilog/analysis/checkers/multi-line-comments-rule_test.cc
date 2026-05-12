@@ -492,6 +492,134 @@ TEST(MultiLineCommentsRuleTest, CRLFWithSignCount) {
       kTestCases, "sign_count:40");
 }
 
+// Tests that indented multi-line comments are properly handled
+TEST(MultiLineCommentsRuleTest, AcceptsIndentedMultiLineComments) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Simple indented comment with spaces
+      {"    //====\n"
+       "    // comment\n"
+       "    //====\n"},
+      // Indented comment with tabs
+      {"\t\t//====\n"
+       "\t\t// comment\n"
+       "\t\t//====\n"},
+      // Deeply nested indented comment
+      {"        //==========\n"
+       "        // deeply nested\n"
+       "        // comment block\n"
+       "        //==========\n"},
+      // Mixed content with indented comment
+      {"module foo;\n"
+       "  //====\n"
+       "  // comment\n"
+       "  //====\n"
+       "endmodule\n"},
+      // Multiple indented comments with different indentation levels
+      {"//====\n"
+       "// top level\n"
+       "//====\n"
+       "  //----\n"
+       "  // indented\n"
+       "  //----\n"},
+  };
+  RunLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(kTestCases);
+}
+
+// Tests that indented multi-line comments with wrong borders are rejected
+TEST(MultiLineCommentsRuleTest, RejectsIndentedWithWrongBorders) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Indented comment with mismatched borders
+      {
+          "    //====\n"
+          "    // comment\n"
+          "    //----\n",
+          {TK_OTHER, "    //----"},
+      },
+      // Indented comment with different length borders
+      {
+          "  //=====\n"
+          "  // comment\n"
+          "  //===\n",
+          {TK_OTHER, "  //==="},
+      },
+      // Tab-indented comment without proper closing
+      {
+          "\t//====\n"
+          "\t// comment\n"
+          "\t// not a border\n",
+          {TK_OTHER, "\t// not a border"},
+      },
+  };
+  RunLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(kTestCases);
+}
+
+// Tests that comments at different indentation levels are treated independently
+TEST(MultiLineCommentsRuleTest, IndependentIndentationLevels) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Two separate comment blocks at different indentation levels
+      {"//====\n"
+       "// level 0\n"
+       "//====\n"
+       "  //----\n"
+       "  // level 2\n"
+       "  //----\n"},
+      // Nested code with different indentation levels
+      {"module foo;\n"
+       "  //====\n"
+       "  // outer\n"
+       "  //====\n"
+       "  if (x) begin\n"
+       "    //----\n"
+       "    // inner\n"
+       "    //----\n"
+       "  end\n"
+       "endmodule\n"},
+  };
+  RunLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(kTestCases);
+}
+
+// Tests that indented comments breaking indentation consistency stop the block
+TEST(MultiLineCommentsRuleTest, IndentationConsistencyRequired) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Two lines at same indentation form a block, but missing proper borders
+      {
+          "  //==\n"
+          "  // same indent\n",
+          {TK_OTHER, "  // same indent"},  // The 2-line block is invalid
+      },
+      // Comment block with indentation - invalid because borders don't match
+      {
+          "    //====\n"
+          "    // indented\n",
+          {TK_OTHER, "    // indented"},  // The 2-line block is invalid
+      },
+      // Valid separation - two independent valid blocks at different indentation
+      {"  //==\n"
+       "  // level 1\n"
+       "  //==\n"
+       "    //====\n"
+       "    // level 2\n"
+       "    //====\n"},
+  };
+  RunLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(kTestCases);
+}
+
+// Tests indented comments with sign_count configuration
+TEST(MultiLineCommentsRuleTest, IndentedWithSignCount) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // 40 chars total in comment part (indentation not counted)
+      {"    //======================================\n"
+       "    // comment\n"
+       "    //======================================\n"},
+      // Tab indentation with 40 char comment
+      {"\t//======================================\n"
+       "\t// comment\n"
+       "\t//======================================\n"},
+  };
+  RunConfiguredLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(
+      kTestCases, "sign_count:40");
+}
+
 }  // namespace
 }  // namespace analysis
 }  // namespace verilog

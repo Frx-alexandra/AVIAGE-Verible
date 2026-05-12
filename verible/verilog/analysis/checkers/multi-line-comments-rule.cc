@@ -87,18 +87,34 @@ static std::string_view StripLineEnding(std::string_view line) {
   return line;
 }
 
+// Helper function to find the position of "//" in a line
+// Returns the position of "//" or std::string_view::npos if not found
+static size_t FindCommentStart(std::string_view line) {
+  return line.find("//");
+}
+
+// Helper function to get the indentation (leading whitespace) of a line
+static size_t GetIndentation(std::string_view line) {
+  size_t indent = 0;
+  while (indent < line.size() && (line[indent] == ' ' || line[indent] == '\t')) {
+    ++indent;
+  }
+  return indent;
+}
+
 // Helper function to check if a line is a valid border
 // Returns the border pattern (content after "//") if valid, empty string
 // otherwise
+// line_content should be the line with leading whitespace already stripped
 std::string_view MultiLineCommentsRule::IsBorderLine(
-    std::string_view line) const {
+    std::string_view line_content) const {
   // Check if line starts with "//"
-  if (!absl::StartsWith(line, "//")) {
+  if (!absl::StartsWith(line_content, "//")) {
     return "";
   }
 
   // Skip the "//" prefix
-  std::string_view content = line.substr(2);
+  std::string_view content = line_content.substr(2);
 
   // Check if content is empty
   if (content.empty()) {
@@ -120,9 +136,9 @@ std::string_view MultiLineCommentsRule::IsBorderLine(
     }
   }
 
-  // If sign_count is set (> 0), check total length
+  // If sign_count is set (> 0), check total length (indentation is not included)
   if (sign_count_ > 0) {
-    if (line.size() != static_cast<size_t>(sign_count_)) {
+    if (line_content.size() != static_cast<size_t>(sign_count_)) {
       return "";
     }
   }
@@ -134,29 +150,44 @@ void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
                                  std::string_view) {
   size_t lineno = 0;
   for (const auto &line : text_structure.Lines()) {
-    if (absl::StartsWith(line, "//")) {
+    size_t comment_pos = FindCommentStart(line);
+    
+    if (comment_pos != std::string_view::npos) {
+      // Found a comment - record its indentation
+      size_t indent = GetIndentation(line);
+      
       // Find the start of a potential multi-line comment block
       size_t start_line = lineno;
       size_t end_line = lineno;
 
-      // Count consecutive // lines
-      while (end_line < text_structure.Lines().size() &&
-             absl::StartsWith(text_structure.Lines()[end_line], "//")) {
+      // Count consecutive // lines with the same indentation
+      while (end_line < text_structure.Lines().size()) {
+        std::string_view current_line = text_structure.Lines()[end_line];
+        size_t current_comment_pos = FindCommentStart(current_line);
+        size_t current_indent = GetIndentation(current_line);
+        
+        // Check if this line has a comment at the same indentation
+        if (current_comment_pos == std::string_view::npos || 
+            current_indent != indent) {
+          break;
+        }
         ++end_line;
       }
 
       size_t block_size = end_line - start_line;
 
       if (block_size > 1) {  // Multi-line comment block
-        // Check first line
-        std::string_view first_stripped =
-            StripLineEnding(text_structure.Lines()[start_line]);
-        std::string_view first_border = IsBorderLine(first_stripped);
+        // Get first line without leading whitespace
+        std::string_view first_full = text_structure.Lines()[start_line];
+        std::string_view first_stripped = StripLineEnding(first_full);
+        std::string_view first_without_indent = first_stripped.substr(indent);
+        std::string_view first_border = IsBorderLine(first_without_indent);
 
-        // Check last line
-        std::string_view last_stripped =
-            StripLineEnding(text_structure.Lines()[end_line - 1]);
-        std::string_view last_border = IsBorderLine(last_stripped);
+        // Get last line without leading whitespace
+        std::string_view last_full = text_structure.Lines()[end_line - 1];
+        std::string_view last_stripped = StripLineEnding(last_full);
+        std::string_view last_without_indent = last_stripped.substr(indent);
+        std::string_view last_border = IsBorderLine(last_without_indent);
 
         // Both must be valid borders and must match exactly
         if (first_border.empty() || last_border.empty() ||
