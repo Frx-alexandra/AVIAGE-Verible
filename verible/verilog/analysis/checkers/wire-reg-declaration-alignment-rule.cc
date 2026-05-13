@@ -46,12 +46,11 @@ const LintRuleDescriptor &WireRegDeclarationAlignmentRule::GetDescriptor() {
       .name = "wire-reg-declaration-alignment",
       .topic = "formatting",
       .desc =
-          "Checks that wire and reg declarations within a file follow "
-          "consistent alignment for: (1) start of length definition "
-          "(dimension/range), (2) start of signal name, and (3) position "
-          "of trailing semicolon. The style follows the first declaration "
-          "in the file. Cross-file consistency is not required, but "
-          "consistency within one file is enforced.",
+          "Checks that wire and reg declarations: (1) start from the first byte "
+          "of the line (column 0) with no leading whitespace, and (2) follow "
+          "consistent alignment for range/dimension start, signal name start, "
+          "and trailing semicolon position. The alignment style follows the first "
+          "declaration in the file.",
   };
   return d;
 }
@@ -108,8 +107,10 @@ bool WireRegDeclarationAlignmentRule::ParseDeclaration(
   const char *p = line.data();
   const char *end = p + line.size();
   
-  // Find the keyword (wire or reg)
+  // Calculate indentation (leading whitespace)
+  const char *start = p;
   while (p < end && (*p == ' ' || *p == '\t')) ++p;
+  info->indentation = p - start;
   
   // Skip the keyword
   if (end - p >= 4 && std::string_view(p, 4) == "wire") {
@@ -173,6 +174,21 @@ bool WireRegDeclarationAlignmentRule::ParseDeclaration(
 
 void WireRegDeclarationAlignmentRule::CheckAlignment(
     const DeclarationInfo &info) {
+  // FIRST: Check if declaration starts at column 0 (new requirement)
+  if (info.indentation > 0) {
+    std::string message = absl::StrCat(
+        "Wire/reg declaration must start from the first byte of the line (column 0). ",
+        "Found ", info.indentation, " byte(s) of leading whitespace.");
+    
+    // Report from start of keyword to end (excluding semicolon)
+    std::string_view violation_text = info.line_text.substr(
+        info.indentation, info.semicolon_pos - info.indentation);
+    TokenInfo token(TK_OTHER, violation_text);
+    violations_.insert(LintViolation(token, message));
+    // Note: We continue checking alignment even if column 0 check fails
+  }
+  
+  // SECOND: Check alignment consistency (original requirement)
   if (!expected_style_.initialized) {
     // First declaration - set name and semicolon alignment from this
     expected_style_.initialized = true;
@@ -233,7 +249,9 @@ void WireRegDeclarationAlignmentRule::CheckAlignment(
   }
   
   if (has_violation) {
-    std::string message = absl::StrCat(kMessage, violation_details);
+    std::string message = absl::StrCat(
+        "Wire/reg declaration does not match the first declaration style in this file. ",
+        violation_details);
     // Report violation from the violation start point up to (but not including) the semicolon
     std::string_view violation_text = info.line_text.substr(
         violation_start, info.semicolon_pos - violation_start);

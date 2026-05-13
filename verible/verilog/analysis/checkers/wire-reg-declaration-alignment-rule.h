@@ -27,14 +27,14 @@
 namespace verilog {
 namespace analysis {
 
-// WireRegDeclarationAlignmentRule checks that wire and reg declarations
-// within a file follow consistent alignment for:
-// - Start of length definition (dimension/range)
-// - Start of signal name
-// - Position of trailing semicolon
+// WireRegDeclarationAlignmentRule checks that wire and reg declarations:
+// 1. Start from the first byte of the line (column 0) with no leading whitespace
+// 2. Follow consistent alignment for:
+//    - Start of length definition (dimension/range)
+//    - Start of signal name
+//    - Position of trailing semicolon
 //
-// The rule follows the first declaration style in the file and reports
-// violations for inconsistent declarations.
+// The alignment style follows the first declaration in the file.
 class WireRegDeclarationAlignmentRule : public verible::TextStructureLintRule {
  public:
   using rule_type = verible::TextStructureLintRule;
@@ -49,10 +49,11 @@ class WireRegDeclarationAlignmentRule : public verible::TextStructureLintRule {
   // Structure to hold information about a declaration
   struct DeclarationInfo {
     size_t line_number;
-    size_t keyword_end;  // Position after "wire" or "reg"
-    bool has_range;      // Whether declaration has a range like [7:0]
-    size_t range_start;  // Position of '[' (only valid if has_range is true)
-    size_t name_start;   // Position of signal name
+    size_t indentation;    // Number of leading whitespace bytes (for column 0 check)
+    size_t keyword_end;    // Position after "wire" or "reg"
+    bool has_range;        // Whether declaration has a range like [7:0]
+    size_t range_start;    // Position of '[' (only valid if has_range is true)
+    size_t name_start;     // Position of signal name
     size_t semicolon_pos;  // Position of ';'
     std::string_view line_text;
   };

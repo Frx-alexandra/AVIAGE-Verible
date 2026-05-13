@@ -29,67 +29,66 @@ namespace {
 using verible::LintTestCase;
 using verible::RunLintTestCases;
 
-// Tests that properly aligned declarations pass
+// Tests that properly aligned declarations at column 0 pass
 TEST(WireRegDeclarationAlignmentRuleTest, AcceptsConsistentAlignment) {
   const std::initializer_list<LintTestCase> kTestCases = {
-      // Single wire declaration
-      {"module m; wire a; endmodule"},
-      // Single reg declaration
-      {"module m; reg b; endmodule"},
-      // Multiple declarations with consistent alignment (same name length)
+      // Single wire declaration at column 0
+      {"module m;\nwire a;\nendmodule"},
+      // Single reg declaration at column 0
+      {"module m;\nreg b;\nendmodule"},
+      // Multiple declarations with consistent alignment at column 0
       {"module m;\n"
-       "  wire  sig1;\n"
-       "  wire  sig2;\n"
+       "wire  sig1;\n"
+       "wire  sig2;\n"
        "endmodule"},
-      // Multiple declarations with ranges, consistent alignment
+      // Multiple declarations with ranges, consistent alignment at column 0
       {"module m;\n"
-       "  wire [7:0] data_a;\n"
-       "  reg  [7:0] data_b;\n"
+       "wire [7:0] data_a;\n"
+       "reg  [7:0] data_b;\n"
        "endmodule"},
-      // Consistent alignment requires same lengths
+      // Consistent alignment at column 0 requires same lengths
       {"module m;\n"
-       "  wire [7:0] signal_a;\n"
-       "  wire [7:0] signal_b;\n"
+       "wire [7:0] signal_a;\n"
+       "wire [7:0] signal_b;\n"
        "endmodule"},
   };
   RunLintTestCases<VerilogAnalyzer, WireRegDeclarationAlignmentRule>(kTestCases);
 }
 
-// Tests that inconsistent alignment is rejected
+// Tests that inconsistent alignment or indentation is rejected
 TEST(WireRegDeclarationAlignmentRuleTest, RejectsInconsistentAlignment) {
   constexpr int kToken = TK_OTHER;
   const std::initializer_list<LintTestCase> kTestCases = {
+      // Indented declarations (violates column 0 rule)
+      {"module m;\n"
+       "  ", {kToken, "wire sig1"}, ";\n"
+       "endmodule"},
       // Inconsistent name start position
       {"module m;\n"
-       "  wire  sig1;\n"
-       "  wire ", {kToken, "sig2"}, ";\n"
+       "wire  sig1;\n"
+       "wire ", {kToken, "sig2"}, ";\n"
        "endmodule"},
       // Inconsistent range start position
       {"module m;\n"
-       "  wire [7:0] data_a;\n"
-       "  wire ", {kToken, "[15:0] data_b"}, ";\n"
+       "wire [7:0] data_a;\n"
+       "wire ", {kToken, "[15:0] data_b"}, ";\n"
        "endmodule"},
       // Inconsistent semicolon position
       {"module m;\n"
-       "  wire [7:0] data_aaa;\n"
-       "  wire ", {kToken, "[7:0] data_b"}, ";\n"
-       "endmodule"},
-      // Multiple violations in single line
-      {"module m;\n"
-       "  wire [7:0]  signal_one;\n"
-       "  wire ", {kToken, "[15:0] sig"}, ";\n"
+       "wire [7:0] data_aaa;\n"
+       "wire ", {kToken, "[7:0] data_b"}, ";\n"
        "endmodule"},
   };
   RunLintTestCases<VerilogAnalyzer, WireRegDeclarationAlignmentRule>(kTestCases);
 }
 
-// Tests mixed wire and reg declarations
+// Tests mixed wire and reg declarations at column 0
 TEST(WireRegDeclarationAlignmentRuleTest, MixedWireAndReg) {
   const std::initializer_list<LintTestCase> kTestCases = {
-      // Properly aligned mix
+      // Properly aligned mix at column 0
       {"module m;\n"
-       "  wire [7:0] data_w;\n"
-       "  reg  [7:0] data_r;\n"
+       "wire [7:0] data_w;\n"
+       "reg  [7:0] data_r;\n"
        "endmodule"},
   };
   RunLintTestCases<VerilogAnalyzer, WireRegDeclarationAlignmentRule>(kTestCases);
@@ -98,18 +97,18 @@ TEST(WireRegDeclarationAlignmentRuleTest, MixedWireAndReg) {
 // Tests that non-declaration lines are ignored
 TEST(WireRegDeclarationAlignmentRuleTest, IgnoresNonDeclarations) {
   const std::initializer_list<LintTestCase> kTestCases = {
-      // Mixed with assignments
+      // Mixed with assignments (assignments can be indented)
       {"module m;\n"
-       "  wire [7:0] data_a;\n"
+       "wire data_a;\n"
        "  assign data_a = 8'h00;\n"
-       "  reg  [7:0] data_b;\n"
+       "wire data_b;\n"
        "endmodule"},
-      // With comments
+      // With comments (comments can be indented)
       {"module m;\n"
        "  // This is a comment\n"
-       "  wire [7:0] data_a;\n"
+       "wire data_a;\n"
        "  /* block comment */\n"
-       "  wire [7:0] data_b;\n"
+       "wire data_b;\n"
        "endmodule"},
   };
   RunLintTestCases<VerilogAnalyzer, WireRegDeclarationAlignmentRule>(kTestCases);
