@@ -29,11 +29,12 @@ namespace analysis {
 
 // IPInstantiationFormatRule checks that all IP/module instantiations within a file
 // follow consistent formatting for port connections:
-// - Position of opening parenthesis '(' for each port connection
-// - Position of closing parenthesis ')' for each port connection
+// 1. Each port connection must be indented by exactly 4 spaces
+// 2. Position of opening parenthesis '(' for each port connection must be consistent
+// 3. Position of closing parenthesis ')' for each port connection must be consistent
 //
-// The format is established by the first port connection line in the first instance
-// found in the file, and all subsequent port connections must match.
+// The format consistency (2 & 3) is established by the first port connection line in
+// the first instance found in the file, and all subsequent port connections must match.
 class IPInstantiationFormatRule : public verible::TextStructureLintRule {
  public:
   using rule_type = verible::TextStructureLintRule;
@@ -48,6 +49,7 @@ class IPInstantiationFormatRule : public verible::TextStructureLintRule {
   // Structure to hold information about a port connection line
   struct PortConnectionInfo {
     size_t line_number;
+    size_t indentation;      // Number of leading spaces (for 4-space check)
     size_t left_paren_pos;   // Position of '('
     size_t right_paren_pos;  // Position of ')'
     std::string_view line_text;

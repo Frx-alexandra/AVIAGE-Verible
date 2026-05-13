@@ -46,11 +46,12 @@ const LintRuleDescriptor &IPInstantiationFormatRule::GetDescriptor() {
       .topic = "formatting",
       .desc =
           "Checks that all IP/module instantiations within a file follow "
-          "consistent formatting for port connections. Specifically checks "
-          "that the positions of opening and closing parentheses for each "
-          "port connection (.port_name(signal)) are aligned consistently. "
-          "The format is established by the first port connection line in the first "
-          "instance found in the file, and all subsequent port connections must match.",
+          "consistent formatting for port connections: (1) each port connection "
+          "must be indented by exactly 4 spaces, and (2) the positions of opening "
+          "and closing parentheses for each port connection (.port_name(signal)) "
+          "are aligned consistently. The parenthesis alignment is established by "
+          "the first port connection line in the first instance found in the file, "
+          "and all subsequent port connections must match.",
   };
   return d;
 }
@@ -96,6 +97,11 @@ bool IPInstantiationFormatRule::ParsePortConnection(
   const char *p = line.data();
   const char *end = p + line.size();
   
+  // Calculate indentation (leading whitespace before the dot)
+  const char *start = p;
+  while (p < end && (*p == ' ' || *p == '\t')) ++p;
+  info->indentation = p - start;
+  
   // Find the dot
   while (p < end && *p != '.') ++p;
   if (p >= end) return false;
@@ -132,6 +138,34 @@ bool IPInstantiationFormatRule::ParsePortConnection(
 }
 
 void IPInstantiationFormatRule::CheckFormat(const PortConnectionInfo &info) {
+  // FIRST: Check if port connection is indented by exactly 4 spaces (new requirement)
+  if (info.indentation != 4) {
+    std::string message = absl::StrCat(
+        "Port connection must be indented by exactly 4 spaces. ",
+        "Found ", info.indentation, " space(s).");
+    
+    // Find the dot position for reporting
+    const char *line_start = info.line_text.data();
+    const char *dot_pos = line_start + info.indentation;  // Dot should be right after indentation
+    while (dot_pos < line_start + info.line_text.size() && *dot_pos != '.') ++dot_pos;
+    
+    if (dot_pos < line_start + info.line_text.size()) {
+      std::string_view violation_text(dot_pos, 
+          (line_start + info.line_text.size()) - dot_pos);
+      // Trim trailing whitespace, newlines, and commas
+      while (!violation_text.empty() && 
+             (violation_text.back() == ' ' || violation_text.back() == '\t' ||
+              violation_text.back() == '\n' || violation_text.back() == '\r' ||
+              violation_text.back() == ',')) {
+        violation_text.remove_suffix(1);
+      }
+      TokenInfo token(TK_OTHER, violation_text);
+      violations_.insert(LintViolation(token, message));
+    }
+    // Note: We continue checking format consistency even if indentation check fails
+  }
+  
+  // SECOND: Check file-wide format consistency (original requirement)
   if (!expected_format_.initialized) {
     // First port connection in the file - set the expected format
     expected_format_.initialized = true;
