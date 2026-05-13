@@ -22,6 +22,7 @@ cc_library(
         ":banned-declared-name-patterns-rule",
         ":begin-same-line-rule",
         ":case-missing-default-rule",
+        ":conditional-operator-spacing-rule",
         ":constraint-name-style-rule",
         ":create-object-name-match-rule",
         ":dff-name-style-rule",
@@ -1763,6 +1764,36 @@ cc_test(
         ":case-missing-default-rule",
         "//verible/common/analysis:linter-test-utils",
         "//verible/common/analysis:syntax-tree-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "conditional-operator-spacing-rule",
+    srcs = ["conditional-operator-spacing-rule.cc"],
+    hdrs = ["conditional-operator-spacing-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:token-stream-lint-rule",
+        "//verible/common/text:token-info",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@abseil-cpp//absl/strings",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "conditional-operator-spacing-rule_test",
+    srcs = ["conditional-operator-spacing-rule_test.cc"],
+    deps = [
+        ":conditional-operator-spacing-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:text-structure-linter-test-utils",
         "//verible/verilog/analysis:verilog-analyzer",
         "//verible/verilog/parser:verilog-token-enum",
         "@googletest//:gtest",
