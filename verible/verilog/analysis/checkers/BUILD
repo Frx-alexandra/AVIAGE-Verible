@@ -48,6 +48,7 @@ cc_library(
         ":generate-label-rule",
         ":instance-shadow-rule",
         ":interface-name-style-rule",
+        ":ip-instantiation-format-rule",
         ":legacy-generate-region-rule",
         ":legacy-genvar-declaration-rule",
         ":line-length-rule",
@@ -1152,6 +1153,37 @@ cc_test(
     srcs = ["wire-reg-declaration-alignment-rule_test.cc"],
     deps = [
         ":wire-reg-declaration-alignment-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:text-structure-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "ip-instantiation-format-rule",
+    srcs = ["ip-instantiation-format-rule.cc"],
+    hdrs = ["ip-instantiation-format-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:text-structure-lint-rule",
+        "//verible/common/text:text-structure",
+        "//verible/common/text:token-info",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@abseil-cpp//absl/strings",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "ip-instantiation-format-rule_test",
+    srcs = ["ip-instantiation-format-rule_test.cc"],
+    deps = [
+        ":ip-instantiation-format-rule",
         "//verible/common/analysis:linter-test-utils",
         "//verible/common/analysis:text-structure-linter-test-utils",
         "//verible/verilog/analysis:verilog-analyzer",

@@ -79,6 +79,7 @@ _linter_test_configs = [
     ("instance-shadowing", "shadow_parameter", False),
     ("invalid-system-task-function", "psprintf", True),
     ("interface-name-style", "interface_type_name_style", True),
+    ("ip-instantiation-format", "ip_instantiation_format", False),
     ("legacy-genvar-declaration", "legacy_genvar_declaration", False),
     ("legacy-generate-region", "legacy_generate_region", False),
     ("macro-name-style", "macro_name_style", True),
