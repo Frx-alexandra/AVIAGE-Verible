@@ -92,6 +92,7 @@ cc_library(
         ":uvm-macro-semicolon-rule",
         ":v2001-generate-begin-rule",
         ":void-cast-rule",
+        ":wire-reg-declaration-alignment-rule",
     ],
     alwayslink = 1,
 )
@@ -1122,6 +1123,37 @@ cc_test(
         ":void-cast-rule",
         "//verible/common/analysis:linter-test-utils",
         "//verible/common/analysis:syntax-tree-linter-test-utils",
+        "//verible/verilog/analysis:verilog-analyzer",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "wire-reg-declaration-alignment-rule",
+    srcs = ["wire-reg-declaration-alignment-rule.cc"],
+    hdrs = ["wire-reg-declaration-alignment-rule.h"],
+    deps = [
+        "//verible/common/analysis:lint-rule-status",
+        "//verible/common/analysis:text-structure-lint-rule",
+        "//verible/common/text:text-structure",
+        "//verible/common/text:token-info",
+        "//verible/verilog/analysis:descriptions",
+        "//verible/verilog/analysis:lint-rule-registry",
+        "//verible/verilog/parser:verilog-token-enum",
+        "@abseil-cpp//absl/strings",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "wire-reg-declaration-alignment-rule_test",
+    srcs = ["wire-reg-declaration-alignment-rule_test.cc"],
+    deps = [
+        ":wire-reg-declaration-alignment-rule",
+        "//verible/common/analysis:linter-test-utils",
+        "//verible/common/analysis:text-structure-linter-test-utils",
         "//verible/verilog/analysis:verilog-analyzer",
         "//verible/verilog/parser:verilog-token-enum",
         "@googletest//:gtest",

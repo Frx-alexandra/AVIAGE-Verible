@@ -116,6 +116,7 @@ _linter_test_configs = [
     ("task-header-check", "task_header_check", False),
     ("v2001-generate-begin", "generate_begin_module", True),
     ("void-cast", "void-cast", True),
+    ("wire-reg-declaration-alignment", "wire_reg_declaration_alignment", False),
     ("undersized-binary-literal", "undersized_binary_literal", True),
     ("unpacked-dimensions-range-ordering", "unpacked_dimensions", True),
     ("forbidden-macro", "uvm_warning", True),
@@ -177,7 +178,7 @@ _linter_test_configs = [
             srcs = ["testdata/{}.sv".format(testfilebase)],
             flags = [
                 "--ruleset=all",
-                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check,-multi-line-comments,-module-description-check,-signal-initialization,-synchronous-reset-check,-function-header-check,-task-header-check",  # exclude this rule and notice checks
+                "--rules=-" + rule + ",-proprietary-notice-check,-modification-history-check,-multi-line-comments,-module-description-check,-signal-initialization,-synchronous-reset-check,-function-header-check,-task-header-check,-wire-reg-declaration-alignment",  # exclude this rule and notice checks
             ],
         ),
     )
