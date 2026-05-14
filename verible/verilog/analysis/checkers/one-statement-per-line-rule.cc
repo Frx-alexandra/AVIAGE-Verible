@@ -114,10 +114,14 @@ void OneStatementPerLineRule::HandleToken(const TokenInfo &token) {
     in_case_statement_ = false;
     seen_newline_ = false;
   } else if (token_enum == TK_assign) {
-    // After assign, we might have another statement after semicolon
+    // assign keyword is part of a statement, not a statement-introducing construct
+    // Reset seen_newline_ only if we're not in a context that requires newlines
+    // (i.e., not after begin/for/if/else/case label)
+    if (!after_begin_ && !after_condition_ && !after_else_ && !after_case_label_) {
+      seen_newline_ = false;
+    }
     after_assign_ = true;
     in_case_statement_ = false;
-    seen_newline_ = false;
   } else if (token_enum == ':') {
     // After colon (case label), expect statement
     // But not if we're inside brackets (array dimensions like [a:b])

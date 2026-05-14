@@ -62,6 +62,12 @@ TEST(OneStatementPerLineRuleTest, AcceptTests) {
 
       // Single begin block with statement on new line
       {"begin\n a = 1;\n end"},
+
+      // For loop with begin on same line, assign on new line
+      {"for (i=0; i<3; i++) begin\n assign a = i;\n end"},
+
+      // Generate for loop with assign on new line
+      {"generate\n for (i=0; i<3; i++) begin\n assign w[i] = data[i];\n end\n endgenerate"},
   };
   RunLintTestCases<VerilogAnalyzer, OneStatementPerLineRule>(kTestCases);
 }
