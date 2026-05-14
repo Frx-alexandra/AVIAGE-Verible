@@ -41,6 +41,33 @@ TEST(MultiLineCommentsRuleTest, AcceptsSingleLine) {
   RunLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(kTestCases);
 }
 
+// Tests that consecutive inline comments (after code) are not treated as multi-line blocks
+TEST(MultiLineCommentsRuleTest, AcceptsConsecutiveInlineComments) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Inline comments in port list
+      {"module data_processor (\n"
+       "  input  wire       i_clk     , // comments2\n"
+       "  input  wire       i_rst_n   , // comments1\n"
+       "  input  wire [7:0] i_data_in ,\n"
+       "  output wire [7:0] o_data_out\n"
+       ");\n"},
+      // Inline comments after assignments
+      {"module test;\n"
+       "  assign a = 1; // comment 1\n"
+       "  assign b = 2; // comment 2\n"
+       "  assign c = 3; // comment 3\n"
+       "endmodule\n"},
+      // Mixed inline and regular comments
+      {"module test;\n"
+       "  wire a; // inline\n"
+       "  wire b; // inline\n"
+       "  // standalone comment\n"
+       "  wire c;\n"
+       "endmodule\n"},
+  };
+  RunLintTestCases<VerilogAnalyzer, MultiLineCommentsRule>(kTestCases);
+}
+
 // Tests that properly formatted multi-line comments pass.
 // Default sign_count is 0, so any matching borders are accepted
 TEST(MultiLineCommentsRuleTest, AcceptsProperMultiLine) {

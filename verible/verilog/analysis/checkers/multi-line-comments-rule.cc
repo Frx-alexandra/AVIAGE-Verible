@@ -153,22 +153,31 @@ void MultiLineCommentsRule::Lint(const TextStructureView &text_structure,
     size_t comment_pos = FindCommentStart(line);
     
     if (comment_pos != std::string_view::npos) {
-      // Found a comment - record its indentation
+      // Found a comment - check if it's at the start of the line (after indentation)
+      // Inline comments (after code) should not be considered for multi-line blocks
       size_t indent = GetIndentation(line);
+      
+      // Skip if comment is not at the start of the line (i.e., it's an inline comment)
+      if (comment_pos != indent) {
+        ++lineno;
+        continue;
+      }
       
       // Find the start of a potential multi-line comment block
       size_t start_line = lineno;
       size_t end_line = lineno;
 
-      // Count consecutive // lines with the same indentation
+      // Count consecutive // lines with the same indentation that start with //
       while (end_line < text_structure.Lines().size()) {
         std::string_view current_line = text_structure.Lines()[end_line];
         size_t current_comment_pos = FindCommentStart(current_line);
         size_t current_indent = GetIndentation(current_line);
         
-        // Check if this line has a comment at the same indentation
+        // Check if this line has a comment at the start (after indentation)
+        // and at the same indentation level
         if (current_comment_pos == std::string_view::npos || 
-            current_indent != indent) {
+            current_indent != indent ||
+            current_comment_pos != current_indent) {
           break;
         }
         ++end_line;
