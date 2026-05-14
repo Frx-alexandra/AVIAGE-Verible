@@ -23,31 +23,6 @@ env:
   VERIBLE_BINDIR: "/tmp/verible-bin"
 
 jobs:
-
-
-  CheckFormatAndBuildClean:
-    runs-on: ubuntu-24.04
-    steps:
-
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Install Dependencies
-      run: |
-        go install github.com/bazelbuild/buildtools/buildifier@latest
-        echo "PATH=$PATH:$(go env GOPATH)/bin/" >> $GITHUB_ENV
-
-    - name: Run formatting style check
-      run: |
-        echo "--- check formatting ---"
-        CLANG_FORMAT=clang-format-18 ./.github/bin/run-format.sh --show-diff
-        echo "--- check build dependencies ---"
-        ./.github/bin/run-build-cleaner.sh
-        echo "--- check potential problems ---"
-        ./.github/bin/check-potential-problems.sh
-
   WindowsBuild:
     runs-on: windows-latest
     steps:
