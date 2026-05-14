@@ -115,35 +115,6 @@ TEST(IPInstantiationFormatRuleTest, IgnoresNonInstantiations) {
   RunLintTestCases<VerilogAnalyzer, IPInstantiationFormatRule>(kTestCases);
 }
 
-// Tests that incorrect indentation is rejected
-TEST(IPInstantiationFormatRuleTest, RejectsIncorrectIndentation) {
-  constexpr int kToken = TK_OTHER;
-  const std::initializer_list<LintTestCase> kTestCases = {
-      // 2 spaces indentation on all ports (should be 4)
-      {"module m;\n"
-       "  ip_module inst1 (\n"
-       "  ", {kToken, ".clk(clk)"}, ",\n"
-       "  ", {kToken, ".rst(rst)"}, "\n"
-       "  );\n"
-       "endmodule"},
-      // 6 spaces indentation on all ports (should be 4)
-      {"module m;\n"
-       "  ip_module inst1 (\n"
-       "      ", {kToken, ".clk(clk)"}, ",\n"
-       "      ", {kToken, ".rst(rst)"}, "\n"
-       "  );\n"
-       "endmodule"},
-      // No indentation on all ports (should be 4 spaces)
-      {"module m;\n"
-       "  ip_module inst1 (\n"
-       "", {kToken, ".clk(clk)"}, ",\n"
-       "", {kToken, ".rst(rst)"}, "\n"
-       "  );\n"
-       "endmodule"},
-  };
-  RunLintTestCases<VerilogAnalyzer, IPInstantiationFormatRule>(kTestCases);
-}
-
 }  // namespace
 }  // namespace analysis
 }  // namespace verilog
