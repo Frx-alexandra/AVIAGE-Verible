@@ -183,6 +183,86 @@ TEST(ConditionalOperatorSpacingRuleTest, DifferentContexts) {
   RunLintTestCases<VerilogAnalyzer, ConditionalOperatorSpacingRule>(kTestCases);
 }
 
+// Tests that non-blocking assignments with <= are not flagged
+TEST(ConditionalOperatorSpacingRuleTest, AcceptsNonBlockingAssignments) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Simple non-blocking assignment with spaces
+      {"module m; always @(posedge clk) buffer <= data_in; endmodule"},
+      // Non-blocking assignment without spaces
+      {"module m; always @(posedge clk) buffer<=data_in; endmodule"},
+      // Non-blocking assignment with unequal spaces (should be accepted for assignments)
+      {"module m; always @(posedge clk) buffer <=  data_in; endmodule"},
+      {"module m; always @(posedge clk) buffer<=  data_in; endmodule"},
+      // Non-blocking assignment in if-else
+      {"module m;\n"
+       "  always @(posedge clk) begin\n"
+       "    if (!rst_n) begin\n"
+       "      buffer <= 8'b0;\n"
+       "    end else begin\n"
+       "      buffer <= data_in;\n"
+       "    end\n"
+       "  end\n"
+       "endmodule"},
+      // Multiple non-blocking assignments
+      {"module m;\n"
+       "  always @(posedge clk) begin\n"
+       "    a <= b;\n"
+       "    c <= d;\n"
+       "    e <= f;\n"
+       "  end\n"
+       "endmodule"},
+      // Non-blocking assignment with array indexing
+      {"module m; always @(posedge clk) buffer[i] <= data_in; endmodule"},
+      // Blocking assignment with = (should not be affected)
+      {"module m; always @(*) buffer = data_in; endmodule"},
+  };
+  RunLintTestCases<VerilogAnalyzer, ConditionalOperatorSpacingRule>(kTestCases);
+}
+
+// Tests that <= in comparison context is still checked
+TEST(ConditionalOperatorSpacingRuleTest, ComparisonOperatorsStillChecked) {
+  constexpr int kToken = TK_OTHER;
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // <= in if condition should still be checked
+      {"module m; always @(*) if (a ", {kToken, "<="}, "b) x = 1; endmodule"},
+      // <= in while condition should still be checked  
+      {"module m; initial while (a", {kToken, "<="}, " b) x = x + 1; endmodule"},
+      // <= in parentheses (expression) should still be checked
+      {"module m; assign x = (a ", {kToken, "<="}, "b); endmodule"},
+      {"module m; assign x = (a", {kToken, "<="}, " b); endmodule"},
+      // >= should always be checked (it's never a non-blocking assignment)
+      {"module m; assign x = (a ", {kToken, ">="}, "b); endmodule"},
+      {"module m; assign x = (a", {kToken, ">="}, " b); endmodule"},
+  };
+  RunLintTestCases<VerilogAnalyzer, ConditionalOperatorSpacingRule>(kTestCases);
+}
+
+// Tests multi-line conditions with comparison operators
+TEST(ConditionalOperatorSpacingRuleTest, MultiLineConditions) {
+  constexpr int kToken = TK_OTHER;
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Multi-line if with <= should still be checked (inside parentheses)
+      {"module m;\n"
+       "  always @(*) if (\n"
+       "    a ", {kToken, "<="}, "b\n"
+       "  ) x = 1;\n"
+       "endmodule"},
+      // Multi-line condition with proper spacing should pass
+      {"module m;\n"
+       "  always @(*) if (\n"
+       "    a <= b\n"
+       "  ) x = 1;\n"
+       "endmodule"},
+      // Multi-line while with comparison
+      {"module m;\n"
+       "  initial while (\n"
+       "    count < max\n"
+       "  ) count = count + 1;\n"
+       "endmodule"},
+  };
+  RunLintTestCases<VerilogAnalyzer, ConditionalOperatorSpacingRule>(kTestCases);
+}
+
 }  // namespace
 }  // namespace analysis
 }  // namespace verilog

@@ -57,6 +57,90 @@ static bool IsOpChar(char c) {
   return c == '=' || c == '!' || c == '<' || c == '>';
 }
 
+// Helper function to check if <= is likely a non-blocking assignment
+// rather than a comparison operator. This uses a simple heuristic:
+// - Check if the operator is inside parentheses on the current line
+// - Check if the line ends with ';' (assignments usually complete with ;)
+// - Check if there's a closing paren after the operator (multi-line condition)
+// - Check if line contains conditional keywords (if, while, for, case)
+// - If none of these, it's likely a non-blocking assignment
+// Note: This only applies to <=, as >= is always a comparison operator
+static bool IsLikelyNonBlockingAssignment(std::string_view line, const char *op_start) {
+  const char *base = line.data();
+  const char *end = base + line.size();
+  
+  // Count parentheses to see if operator is inside parens
+  // Check if there are more open parens than close parens before the operator
+  int paren_depth = 0;
+  for (const char *p = base; p < op_start; ++p) {
+    if (*p == '(') ++paren_depth;
+    else if (*p == ')') --paren_depth;
+  }
+  
+  // If we're inside parentheses (paren_depth > 0), it's a comparison in expression
+  // Example: assign x = (a <= b); 
+  if (paren_depth > 0) {
+    return false;
+  }
+
+  // Check if there's a closing paren or other expression indicators after the operator
+  // This suggests we're in a multi-line condition or expression
+  bool has_closing_paren = false;
+  bool ends_with_semicolon = false;
+  
+  for (const char *p = op_start + 2; p < end; ++p) {
+    if (*p == ')') {
+      has_closing_paren = true;
+      break;
+    }
+    if (*p == ';') {
+      ends_with_semicolon = true;
+      break;
+    }
+  }
+  
+  // Check from the end of the line backwards for semicolon (ignoring whitespace/newline)
+  for (const char *p = end - 1; p >= base; --p) {
+    if (*p == ';') {
+      ends_with_semicolon = true;
+      break;
+    }
+    if (*p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') {
+      // Found non-whitespace that's not semicolon
+      break;
+    }
+  }
+  
+  // If line has closing paren after operator, it's likely an expression/condition
+  if (has_closing_paren) {
+    return false;
+  }
+  
+  // If line doesn't end with semicolon, it's likely a multi-line expression/condition
+  // Non-blocking assignments typically complete on the same line with ';'
+  if (!ends_with_semicolon) {
+    return false;
+  }
+
+  // Check for conditional keywords that suggest comparison context
+  if (line.find("if ") != std::string_view::npos ||
+      line.find("if(") != std::string_view::npos ||
+      line.find("while ") != std::string_view::npos ||
+      line.find("while(") != std::string_view::npos ||
+      line.find("for ") != std::string_view::npos ||
+      line.find("for(") != std::string_view::npos ||
+      line.find("case ") != std::string_view::npos ||
+      line.find("case(") != std::string_view::npos ||
+      line.find("assert ") != std::string_view::npos ||
+      line.find("assert(") != std::string_view::npos) {
+    return false;  // Likely a comparison in conditional
+  }
+
+  // Otherwise, likely a non-blocking assignment
+  // Example: buffer <= data;
+  return true;
+}
+
 // Checks a single line for conditional/comparison operators and validates
 // that spacing on both sides is symmetric.
 static void CheckLineForOperatorSpacing(std::string_view line,
@@ -88,6 +172,12 @@ static void CheckLineForOperatorSpacing(std::string_view line,
           op_text == ">" || op_text == "<=" || op_text == ">=" ||
           op_text == "===" || op_text == "!==")) {
       continue;
+    }
+
+    // Special handling for <= which could be a non-blocking assignment
+    // Note: >= is always a comparison operator, never an assignment
+    if (op_text == "<=" && IsLikelyNonBlockingAssignment(line, op_start)) {
+      continue;  // Skip - this is likely a non-blocking assignment
     }
 
     // Look left for spaces until the previous non-space or beginning.
