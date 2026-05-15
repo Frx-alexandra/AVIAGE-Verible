@@ -150,6 +150,20 @@ static void CheckLineForOperatorSpacing(std::string_view line,
   const char *base = line.data();
   const char *end = base + line.size();
   const char *p = base;
+  
+  // Find comment start (//) and only check up to that point
+  const char *comment_start = nullptr;
+  for (const char *c = base; c < end - 1; ++c) {
+    if (c[0] == '/' && c[1] == '/') {
+      comment_start = c;
+      break;
+    }
+  }
+  
+  // If there's a comment, only check up to the comment
+  if (comment_start) {
+    end = comment_start;
+  }
 
   while (p < end) {
     // Skip non-operator characters.

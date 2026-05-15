@@ -263,6 +263,23 @@ TEST(ConditionalOperatorSpacingRuleTest, MultiLineConditions) {
   RunLintTestCases<VerilogAnalyzer, ConditionalOperatorSpacingRule>(kTestCases);
 }
 
+// Tests that operators in comments are ignored
+TEST(ConditionalOperatorSpacingRuleTest, IgnoresOperatorsInComments) {
+  const std::initializer_list<LintTestCase> kTestCases = {
+      // Comment with == characters
+      {"module m; // comment with == in it\nendmodule"},
+      // Comment line with decorative equals
+      {"//========== test ================================================\n"},
+      // Comment with mixed operators
+      {"module m; wire a; // a <= b, a >= c, a == d\nendmodule"},
+      // Code with comment on same line
+      {"module m; assign x = (a == b); // comparison\nendmodule"},
+      // Comment with unequal spacing around operators (should be ignored)
+      {"// if (a ==b) or (c<= d)\n"},
+  };
+  RunLintTestCases<VerilogAnalyzer, ConditionalOperatorSpacingRule>(kTestCases);
+}
+
 }  // namespace
 }  // namespace analysis
 }  // namespace verilog
